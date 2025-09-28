@@ -12,8 +12,11 @@ __pycache__/
 .DS_Store
 
 # Data and Output Folders
-/input_data/
-/output/
+# Ignore all contents of the input_data folder...
+input_data/*
+# ...but DO NOT ignore the README file inside it.
+!input_data/README.md
+# Ignore all contents of the output folder (no readme in there)
+output/*
 *.zip
-*.pdf
-*.png
+*.tar.gz
