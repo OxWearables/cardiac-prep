@@ -1,0 +1,19 @@
+# Python virtual environment
+venv/
+/env/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE and OS-specific files
+.vscode/
+.idea/
+.DS_Store
+
+# Data and Output Folders
+/input_data/
+/output/
+*.zip
+*.pdf
+*.png
