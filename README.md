@@ -33,7 +33,7 @@ Place your raw `.EDF` files in the `./input_data/` directory.
 
 ### 4.  **Run Pipeline**: 
 **Step 1: Process Individual Files**
-This command processes every .edf file and generates a detailed output folder for each participant inside ./output/.
+This command processes every `.EDF` file and generates a detailed output folder for each participant inside `./output/`.
 Average time per file: ~30 seconds
 ```
 python run_local.py
@@ -55,7 +55,7 @@ The pipeline generates an `./output/` directory containing:
 * **Top-Level Files**: An aggregated `df_info_summary.csv.gz` for all participants and summary plots (`.png`) for the entire dataset.
 
 ## A Note on HRV Normalisation
-This pipeline uses the natural logarithm of RMSSD ($ln(RMSSD)$) to calculate a normalised HRV value. This is a standard statistical method that removes the mathematical influence of a person's average heart rate, allowing for fairer comparisons. For a detailed explanation, see this article by Marco Altini:
+This pipeline uses the natural logarithm of RMSSD to calculate a normalised HRV value. This is a standard statistical method that removes the mathematical influence of a person's average heart rate, allowing for fairer comparisons. For a detailed explanation, see this article by Marco Altini:
 * [**Should we normalize HRV by heart rate?**](https://marcoaltini.substack.com/p/should-we-normalize-hrv-by-heart)
 
 ## Authors
