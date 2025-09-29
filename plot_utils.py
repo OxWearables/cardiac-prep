@@ -190,7 +190,9 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
 
     # --- PAGE 1: Overall Summary ---
     c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2.0, height - 0.75*inch, "Your Activity & Heart Summary")
+    c.drawCentredString(width / 2.0, height - 0.75*inch, "Your Activity & Heart Report")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width / 2.0, height - 1.05*inch, "Summary Metrics")
     
     # --- Main Plots ---
     if profile_plot_path and os.path.exists(profile_plot_path):
@@ -216,36 +218,46 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
     
     # --- PAGE 2: Day-by-Day Details ---
     c.showPage()
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2.0, height - 0.75*inch, "Day-by-Day Details")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width / 2.0, height - 0.75*inch, "Daily Results")
     
     y_cursor = height - 1.25*inch
     if daily_hrv_summary is not None and not daily_hrv_summary.empty:
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(1*inch, y_cursor, "Daily Sedentary Heart Rate Variability")
+        c.drawString(1*inch, y_cursor, "Heart Rate Variability")
         y_cursor -= 0.15*inch
 
         p_style = styles['Italic']
         p_style.fontSize = 9
-        explanation_text = """
-        This table shows your median Heart Rate Variability (RMSSD, in ms) calculated from sedentary periods for each day.
-        The value in brackets is the natural log of RMSSD, which normalises the distribution for fairer comparison.
-        """
+        explanation_text = """This table shows your median Heart Rate Variability (RMSSD) calculated 
+        during your quietest periods each day (typically sleep). 
+        We also show the natural log of RMSSD in brackets, which 'normalises' the value. 
+        This is useful because factors like alcohol or stress can raise your heart rate, 
+        which in turn lowers your HRV. The normalised value helps to reduce this effect, 
+        giving a clearer picture of your nervous system's recovery."""
         p = Paragraph(explanation_text, p_style)
         p.wrapOn(c, width - 2*inch, 1*inch)
         p.drawOn(c, 1*inch, y_cursor - p.height)
         y_cursor -= (p.height + 0.2*inch)
 
         dates = [d.strftime('%b %d') for d in daily_hrv_summary.index]
-        headers = [''] + [f"Day {i+1}" for i in range(len(daily_hrv_summary))]
-        date_row = ['Date'] + dates
-        
-        formatted_values = daily_hrv_summary.apply(lambda row: f"{row['rmssd']:.1f} ({row['norm_hrv']:.2f})", axis=1).tolist()
-        data_row = ['RMSSD (Norm)'] + formatted_values
-        
+        num_nights = len(dates) - 1
+        headers = [''] + [f"Night {i+1}" for i in range(num_nights)]
+        # Correctly create date pairs for n-1 nights, with "Jul 10/11" format
+        date_row = ['Date'] + [f"{dates[i]}/{dates[i+1].split()[-1]}" for i in range(num_nights)]
+        # Extract ALL formatted values first
+        formatted_values = daily_hrv_summary.apply(
+            lambda row: f"{row['rmssd']:.1f} ({row['norm_hrv']:.2f})" if pd.notna(row['rmssd']) else "No Data", 
+            axis=1
+        ).tolist()
+        # Correctly slice data for n-1 nights.
+        # We use formatted_values[1:] because the HRV for the night of "Day 1 / Day 2" is typically
+        # calculated from the sleep data recorded on the morning of "Day 2".
+        data_row = ['RMSSD (Norm)'] + formatted_values[1:]
         table_data = [headers, date_row, data_row]
-        
-        t = Table(table_data, colWidths=[1.2*inch] + [1.0*inch] * len(daily_hrv_summary))
+      
+        # The number of data columns is now num_nights
+        t = Table(table_data, colWidths=[1.2*inch] + [1.0*inch] * num_nights)
         t.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 1, colors.black), ('ALIGN', (0,0), (-1,-1), 'CENTER'),
                                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTNAME', (0,1), (0,-1), 'Helvetica-Bold')]))
         
