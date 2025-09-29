@@ -36,7 +36,7 @@ def main():
     if not edf_files:
         print(f"Error: No .edf or .EDF files found in '{input_directory}'")
         return
-    
+        
     print(f"Found {len(edf_files)} EDF files to process using {n_processes} cores.")
 
     ## Run Processing in Parallel 

@@ -165,8 +165,8 @@ def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
         return None
 
     sleep_periods['date'] = sleep_periods.index.date
-
-    daily_hrv = sleep_periods.groupby('date')['rmssd'].median()
+    # Use .agg() to ensure the output is always a Pandas Series, even if only one night is present
+    daily_hrv = sleep_periods.groupby('date')['rmssd'].agg('median')
     
     if daily_hrv.empty: 
         return None
