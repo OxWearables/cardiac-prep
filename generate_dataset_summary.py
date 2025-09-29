@@ -27,7 +27,7 @@ def plot_hrv_vs_rhr(df, save_path):
     
     sns.regplot(
         x='HR_rest_robust', 
-        y='mean_daily_rmssd', 
+        y='median_daily_rmssd', 
         data=df, 
         ax=ax, 
         scatter_kws={'alpha': 0.6, 'color': SEDENTARY},
@@ -65,7 +65,7 @@ def plot_dataset_histograms(df):
     axes[0, 0].yaxis.set_major_locator(MaxNLocator(integer=True))
 
     # Mean Daily RMSSD (HRV)
-    sns.histplot(df['mean_daily_rmssd'].dropna(), kde=True, ax=axes[0, 1], color=LIGHT_GREEN)
+    sns.histplot(df['median_daily_rmssd'].dropna(), kde=True, ax=axes[0, 1], color=LIGHT_GREEN)
     axes[0, 1].set_title('Distribution of Heart Rate Variability (RMSSD)', fontsize=14)
     axes[0, 1].set_xlabel('Mean Daily RMSSD (ms)')
     axes[0, 1].yaxis.set_major_locator(MaxNLocator(integer=True))
