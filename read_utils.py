@@ -6,7 +6,8 @@ from scipy.signal import butter, filtfilt, iirnotch
 from scipy.ndimage import median_filter
 from actipy.processing import calibrate_gravity
 import os
-__author__ = "Stefan van Duijvenboden"
+
+
 
 def readEDFECG_info(edfFile, signal_label='ECG'):
     print('--> read EDF from ' + edfFile + '...')   

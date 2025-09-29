@@ -1,10 +1,11 @@
+__author__ = "Stefan van Duijvenboden"
+
 import numpy as np
 import pandas as pd
 from scipy.signal import decimate, detrend
 from scipy.ndimage import binary_closing
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
-__author__ = "Stefan van Duijvenboden"
 
 # noise dectection
 def downsampleECG(ecg,fs_org, fs=125,thrs_mar=1.0):

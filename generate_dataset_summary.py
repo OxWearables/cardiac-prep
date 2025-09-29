@@ -16,7 +16,8 @@ from plot_utils import SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED, NE
 from matplotlib.ticker import MaxNLocator
 
 SUMMARY_FILE_PATH = "./output/df_info_summary.csv.gz"
-OUTPUT_PLOT_PATH = "./output/dataset_summary_histograms.png"
+OUTPUT_HIST_PATH = "./output/dataset_summary_histograms.png"
+OUTPUT_SCATTER_PATH = "./output/dataset_rhr_vs_hrv.png"
 
 def plot_hrv_vs_rhr(df, save_path):
     """
@@ -98,8 +99,8 @@ def plot_dataset_histograms(df):
     axes[2, 1].set_xlim(0, 1)
 
     plt.tight_layout(rect=[0, 0, 1, 0.98])
-    plt.savefig(OUTPUT_PLOT_PATH, dpi=150)
-    print(f"Dataset summary plot saved to: {OUTPUT_PLOT_PATH}")
+    plt.savefig(OUTPUT_HIST_PATH, dpi=150)
+    print(f"Dataset summary plot saved to: {OUTPUT_HIST_PATH}")
     plt.close(fig)
 
 
@@ -110,21 +111,15 @@ if __name__ == '__main__':
     else:
         summary_df = pd.read_csv(SUMMARY_FILE_PATH)
         
-        # Find all columns that match the 'RMSSD_Day_X' pattern
-        rmssd_day_cols = [col for col in summary_df.columns if 'RMSSD_Day_' in col]
-        if rmssd_day_cols:
-            # Calculate the mean across these columns for each participant
-            summary_df['mean_daily_rmssd'] = summary_df[rmssd_day_cols].mean(axis=1)
+        # Check if the required HRV column exists, which is the output of the latest proc_edf.py
+        if 'mean_daily_rmssd' not in summary_df.columns:
+            print("Error: The required column 'mean_daily_rmssd' was not found in the summary file.")
+            print("Please ensure you have run the latest version of 'proc_edf.py'.")
         else:
-            # Fallback if no daily columns are found (for older summary files)
-            print("Warning: No 'RMSSD_Day_X' columns found. Falling back to 'mean_rmssd_ms_overall'.")
-            summary_df['mean_daily_rmssd'] = summary_df['mean_rmssd_ms_overall']
-        
-        # Generate histogram plots
-        plot_dataset_histograms(summary_df.copy())
+            print("Successfully loaded summary data. Generating dataset plots...")
+            
+            # Generate histogram plots
+            plot_dataset_histograms(summary_df.copy())
 
-        # Generate RHR vs HRV plot
-        plot_hrv_vs_rhr(
-            summary_df.copy(), 
-            save_path="./output/dataset_rhr_vs_hrv.png"
-        )
+            # Generate RHR vs HRV plot
+            plot_hrv_vs_rhr(summary_df.copy(), save_path=OUTPUT_SCATTER_PATH)
