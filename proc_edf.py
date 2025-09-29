@@ -105,31 +105,31 @@ def procECG(f, i, chunk_samples, signal_label='ECG', fs=250):
 
 def calculate_summary_metrics(df_qc, sleep_thrs):
     """
-    Resamples data to 1-minute windows and calculates robust summary metrics.
+    Resamples data to 10-minute windows and calculates robust summary metrics.
     """
     if df_qc.empty:
         return {} # Return an empty dictionary if there's no data
 
-    # 1. Resample 10-second data to 1-minute averages of RRm, rmssd, and acc
-    df_1min = df_qc.resample('1min', on='time').mean()
+    # 1. Resample 10-second data to 10-minute averages of RRm, rmssd, and acc
+    df_10min = df_qc.resample('10min', on='time').mean()
 
-    # 2. Calculate the 1-minute average heart rate (just translate RR to HR)
-    df_1min['HR_1min'] = 60 * 1000 / df_1min['RRm_imputed']
+    # 2. Calculate the 10-minute average heart rate (just translate RR to HR)
+    df_10min['HR_10min'] = 60 * 1000 / df_10min['RRm_imputed']
     
-    # 3. Pick the 1-min segments with min, max, and mean avg HR
+    # 3. Pick the 10-min segments with min, max, and mean avg HR
     summary = {
-        'HR_min': df_1min['HR_1min'].min(),
-        'HR_max': df_1min['HR_1min'].max(),
-        'HR_mean': df_1min['HR_1min'].mean()
+        'HR_min': df_10min['HR_10min'].min(),
+        'HR_max': df_10min['HR_10min'].max(),
+        'HR_mean': df_10min['HR_10min'].mean()
     }
 
     # 4. Isolate resting (sleep) periods using the low acceleration threshold
-    resting_periods = df_1min[df_1min['acc_imputed'] < sleep_thrs]
-    print(f"Found {len(resting_periods)} resting periods (1-min segments with acc < {sleep_thrs} mg)")
+    resting_periods = df_10min[df_10min['acc_imputed'] < sleep_thrs]
+    print(f"Found {len(resting_periods)} resting periods (10-min segments with acc < {sleep_thrs} mg)")
 
     if not resting_periods.empty:
         # 5. Calculate Resting HR and Resting HRV from these quiet periods
-        summary['HR_rest_robust'] = resting_periods['HR_1min'].median() # use median instead of mean for robustness
+        summary['HR_rest_robust'] = resting_periods['HR_10min'].median() # use median instead of mean for robustness
         summary['median_daily_rmssd'] = resting_periods['rmssd'].median() # use median instead of mean for robustness
     else:
         # Provide fallback values if no resting periods are found
@@ -140,11 +140,11 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
 
 
 def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
-    """Calculates the daily median RMSSD from 1-minute sleep periods for the report table."""
+    """Calculates the daily median RMSSD from 10-minute sleep periods for the report table."""
     if df_qc.empty: return None
     
-    df_1min = df_qc.resample('1min', on='time').mean()
-    sleep_periods = df_1min[df_1min['acc_imputed'] < sleep_thrs].copy()
+    df_10min = df_qc.resample('10min', on='time').mean()
+    sleep_periods = df_10min[df_10min['acc_imputed'] < sleep_thrs].copy()
     
     if sleep_periods.empty: return None
 
@@ -163,7 +163,7 @@ def procEDF(edf_file, m_qrs):
     """Main processing pipeline for a single EDF file."""
     Ts = [['start', time.time()]]
     base_filename = os.path.basename(edf_file)
-    output_dirname = os.path.splitext(base_filename)[0]
+    output_dirname = os.path.spligittext(base_filename)[0]
     
     subject_output_path = os.path.join("./output/", output_dirname)
     plots_path = os.path.join(subject_output_path, "plots")
@@ -210,17 +210,10 @@ def procEDF(edf_file, m_qrs):
         df_qc = df_qc.join(df_acc, how='left')
         df_qc.loc[~df_qc['device_worn'], 'acc'] = np.nan
 
-        high_quality_rrm = df_qc.loc[df_qc['passed_finalQC'], 'RRm']
-        if not high_quality_rrm.empty:
-            dat_info['HR_min'] = 60 * 1000 / high_quality_rrm.max()
-            dat_info['HR_max'] = 60 * 1000 / high_quality_rrm.min()
-        else:
-            dat_info['HR_min'], dat_info['HR_max'] = np.nan, np.nan
-
         df_qc = doImp(df_qc, 'RRm')
         df_qc = doImp(df_qc, 'acc')
         
-        # Calculate all summary metrics using the new 1-minute window method
+        # Calculate all summary metrics using the new 10-minute window method
         summary_metrics = calculate_summary_metrics(df_qc, SLEEP_THRS)
         
         # Update the main dat_info DataFrame with these new, robust values
