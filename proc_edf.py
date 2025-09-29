@@ -124,13 +124,20 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
     }
 
     # 4. Isolate resting (sleep) periods using the low acceleration threshold
-    resting_periods = df_10min[df_10min['acc_imputed'] < sleep_thrs]
-    print(f"Found {len(resting_periods)} resting periods (10-min segments with acc < {sleep_thrs} mg)")
+    # Create a boolean mask for times between 9 PM and 9 AM.
+    # The '|' (OR) is used to combine the late evening hours with the early morning hours.
+    # TODO WARNING: This simple hardcoded time window may not be suitable for all populations!
+    # TODO IN THE FUTURE FIGURE OUT A WAY TO ACCOUNT FOR SHIFT WORKERS ETC. 
+    is_night_time = (df_10min.index.hour >= 21) | (df_10min.index.hour < 9)
+    
+    # Combine the time filter with the existing low-movement filter
+    sleep_periods = df_10min[is_night_time & (df_10min['acc_imputed'] < sleep_thrs)].copy()
+    print(f"Found {len(sleep_periods)} sleep periods (10-min segments with acc < {sleep_thrs} mg)")
 
-    if not resting_periods.empty:
+    if not sleep_periods.empty:
         # 5. Calculate Resting HR and Resting HRV from these quiet periods
-        summary['HR_rest_robust'] = resting_periods['HR_10min'].median() # use median instead of mean for robustness
-        summary['median_daily_rmssd'] = resting_periods['rmssd'].median() # use median instead of mean for robustness
+        summary['HR_rest_robust'] = sleep_periods['HR_10min'].median() # use median instead of mean for robustness
+        summary['median_daily_rmssd'] = sleep_periods['rmssd'].median() # use median instead of mean for robustness
     else:
         # Provide fallback values if no resting periods are found
         summary['HR_rest_robust'] = np.nan
@@ -144,17 +151,29 @@ def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
     if df_qc.empty: return None
     
     df_10min = df_qc.resample('10min', on='time').mean()
-    sleep_periods = df_10min[df_10min['acc_imputed'] < sleep_thrs].copy()
+    # Create a boolean mask for times between 9 PM and 9 AM.
+    # The '|' (OR) is used to combine the late evening hours with the early morning hours.
+    # TODO WARNING: This simple hardcoded time window may not be suitable for all populations!
+    # TODO IN THE FUTURE FIGURE OUT A WAY TO ACCOUNT FOR SHIFT WORKERS ETC. 
+    is_night_time = (df_10min.index.hour >= 21) | (df_10min.index.hour < 9)
     
-    if sleep_periods.empty: return None
+    # Combine the time filter with the existing low-movement filter
+    sleep_periods = df_10min[is_night_time & (df_10min['acc_imputed'] < sleep_thrs)].copy()
+    
+    if sleep_periods.empty:
+        print("No sleep periods found within the 21:00 - 09:00 time window.")
+        return None
 
     sleep_periods['date'] = sleep_periods.index.date
+
     daily_hrv = sleep_periods.groupby('date')['rmssd'].median()
     
-    if daily_hrv.empty: return None
+    if daily_hrv.empty: 
+        return None
         
     daily_hrv_summary = daily_hrv.to_frame(name='rmssd')
     daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
+
     return daily_hrv_summary
 
 
@@ -163,7 +182,7 @@ def procEDF(edf_file, m_qrs):
     """Main processing pipeline for a single EDF file."""
     Ts = [['start', time.time()]]
     base_filename = os.path.basename(edf_file)
-    output_dirname = os.path.spligittext(base_filename)[0]
+    output_dirname = os.path.splitext(base_filename)[0]
     
     subject_output_path = os.path.join("./output/", output_dirname)
     plots_path = os.path.join(subject_output_path, "plots")

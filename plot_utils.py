@@ -230,8 +230,7 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
         p_style = styles['Italic']
         p_style.fontSize = 9
         explanation_text = """This table shows your median Heart Rate Variability (RMSSD) calculated 
-        during your quietest periods each day (typically sleep). 
-        We also show the natural log of RMSSD in brackets, which 'normalises' the value. 
+        during sleep. We also show the natural log of RMSSD in brackets, which 'normalises' the value. 
         This is useful because factors like alcohol or stress can raise your heart rate, 
         which in turn lowers your HRV. The normalised value helps to reduce this effect, 
         giving a clearer picture of your nervous system's recovery."""
