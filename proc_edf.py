@@ -35,7 +35,6 @@ NBEATS_LIM = 5
 RRmin = 250  # 0.25 seconds in ms
 RRmax = 2500  # 2.5 seconds in ms
 N_RR_outliers_max = 1
-acc_sedentary_thrs = 4  # in mg
 
 # Activity Thresholds in milli-g (mg)
 ACTIVITY_THRESHOLDS = {
@@ -45,7 +44,7 @@ ACTIVITY_THRESHOLDS = {
 }
 
 # New, lower threshold to define resting/sleep periods (hypothetical value for now)
-SLEEP_THRS = 5 # in mg
+SLEEP_THRS = 2 # in mg
 
 # Multiprocessing and ECG Processing Functions 
 def init_worker():
@@ -139,6 +138,26 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
         
     return summary
 
+
+def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
+    """Calculates the daily median RMSSD from 1-minute sleep periods for the report table."""
+    if df_qc.empty: return None
+    
+    df_1min = df_qc.resample('1min', on='time').mean()
+    sleep_periods = df_1min[df_1min['acc_imputed'] < sleep_thrs].copy()
+    
+    if sleep_periods.empty: return None
+
+    sleep_periods['date'] = sleep_periods.index.date
+    daily_hrv = sleep_periods.groupby('date')['rmssd'].median()
+    
+    if daily_hrv.empty: return None
+        
+    daily_hrv_summary = daily_hrv.to_frame(name='rmssd')
+    daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
+    return daily_hrv_summary
+
+
 # Main Processing Function
 def procEDF(edf_file, m_qrs):
     """Main processing pipeline for a single EDF file."""
@@ -208,6 +227,9 @@ def procEDF(edf_file, m_qrs):
         for key, value in summary_metrics.items():
             dat_info[key] = value
 
+         # Calculate the daily HRV summary specifically for the report table
+        daily_hrv_summary_for_report = calculate_daily_hrv_for_report(df_qc, SLEEP_THRS)
+
         # Final HR column for plotting
         df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
         
@@ -249,9 +271,8 @@ def procEDF(edf_file, m_qrs):
         pie_chart_path = plot_activity_pie_chart(dat_info, save_path=os.path.join(plots_path, base_filename + "_activity_pie.png"))
         hr_dist_path = plot_hr_distribution(df_qc, save_path=os.path.join(plots_path, base_filename + "_hr_distribution.png"))
         daily_bars_path = plot_daily_activity_bars(df_qc.copy(), ACTIVITY_THRESHOLDS, save_path=os.path.join(plots_path, base_filename + "_daily_bars.png"))
-        
-        create_pdf_report(dat_info, subject_output_path, edf_file, ACTIVITY_THRESHOLDS, num_days, daily_bars_path, profile_plot_path, pie_chart_path, hr_dist_path)
-        
+        create_pdf_report(dat_info, subject_output_path, edf_file, ACTIVITY_THRESHOLDS, num_days, daily_bars_path, profile_plot_path, daily_hrv_summary_for_report, pie_chart_path, hr_dist_path)
+
         Ts.append(['create_report', time.time()])
         df_time = pd.DataFrame(Ts, columns=['task', 't'])
         df_time['dt'] = df_time['t'].diff().fillna(0)

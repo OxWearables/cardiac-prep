@@ -192,15 +192,18 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
     c.setFont("Helvetica-Bold", 16)
     c.drawCentredString(width / 2.0, height - 0.75*inch, "Your Activity & Heart Summary")
     
+    # --- Main Plots ---
     if profile_plot_path and os.path.exists(profile_plot_path):
         c.drawImage(profile_plot_path, 0.5*inch, height - 4.25*inch, width=width-1*inch, height=3*inch, preserveAspectRatio=True)
-    
     if pie_chart_path and os.path.exists(pie_chart_path):
         c.drawImage(pie_chart_path, 0.7*inch, height - 6.5*inch, width=3*inch, height=2.2*inch, preserveAspectRatio=True)
     
+    # Heart Rate Table
     hr_data = [
-        ['Resting', f"{dat_info['HR_rest_robust'].iloc[0]:.1f}"], ['Lowest', f"{dat_info['HR_min'].iloc[0]:.1f}"],
-        ['Average', f"{dat_info['HR_mean'].iloc[0]:.1f}"], ['Highest', f"{dat_info['HR_max'].iloc[0]:.1f}"]
+        ['Resting', f"{dat_info['HR_rest_robust'].iloc[0]:.1f}"], 
+        ['Lowest', f"{dat_info['HR_min'].iloc[0]:.1f}"],
+        ['Average', f"{dat_info['HR_mean'].iloc[0]:.1f}"], 
+        ['Highest', f"{dat_info['HR_max'].iloc[0]:.1f}"]
     ]
     hr_table = Table(hr_data, colWidths=[1.2*inch]*2, rowHeights=0.4*inch)
     hr_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('GRID', (0,0), (-1,-1), 1, colors.black),
@@ -252,6 +255,7 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
 
     if daily_bars_path and os.path.exists(daily_bars_path):
         c.drawImage(daily_bars_path, 0.5*inch, y_cursor - 4.5*inch, width=width-1*inch, height=4*inch, preserveAspectRatio=True)
+
 
     c.save()
     print(f"Generated PDF report, saved to: {pdf_path}")
