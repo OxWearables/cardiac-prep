@@ -79,11 +79,13 @@ def plot_dataset_histograms(df):
     sns.histplot(data_to_plot[data_to_plot <= upper_limit], kde=True, ax=axes[1, 0], color=MODERATE_YELLOW)
     axes[1, 0].set_title('Distribution of Daily MVPA', fontsize=14)
     axes[1, 0].set_xlabel('Average Hours per Day')
+    axes[1, 0].yaxis.set_major_locator(MaxNLocator(integer=True))
     
     # Hours of Vigorous Activity
     sns.histplot(df['hours_vigorous_activity'].dropna(), kde=True, ax=axes[1, 1], color=VIGOROUS_RED)
     axes[1, 1].set_title('Distribution of Daily Vigorous Activity', fontsize=14)
     axes[1, 1].set_xlabel('Average Hours per Day')
+    axes[1, 1].yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ## Plotting Data Quality Metrics
     #  Proportion of Good Quality ECG
@@ -91,12 +93,14 @@ def plot_dataset_histograms(df):
     axes[2, 0].set_title('Distribution of Usable ECG Data', fontsize=14)
     axes[2, 0].set_xlabel('Proportion of High-Quality ECG Segments')
     axes[2, 0].set_xlim(0, 1)
+    axes[2, 0].yaxis.set_major_locator(MaxNLocator(integer=True))
 
     # Fraction of Imputed Data
     sns.histplot(df['frac_RR_imp'].dropna(), kde=True, ax=axes[2, 1], color=NEUTRAL_GRAY)
     axes[2, 1].set_title('Distribution of Imputed Data', fontsize=14)
     axes[2, 1].set_xlabel('Fraction of Heart Rate Data Imputed')
     axes[2, 1].set_xlim(0, 1)
+    axes[2, 1].yaxis.set_major_locator(MaxNLocator(integer=True))
 
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     plt.savefig(OUTPUT_HIST_PATH, dpi=150)

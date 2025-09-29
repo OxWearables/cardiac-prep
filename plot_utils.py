@@ -202,29 +202,35 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
     
     # Heart Rate Table
     hr_data = [
-        ['Heart Rate (BPM)', None],  # Title row, second element is None for spanning
         ['Resting', f"{dat_info['HR_rest_robust'].iloc[0]:.1f}"], 
         ['Lowest', f"{dat_info['HR_min'].iloc[0]:.1f}"],
         ['Average', f"{dat_info['HR_mean'].iloc[0]:.1f}"], 
         ['Highest', f"{dat_info['HR_max'].iloc[0]:.1f}"]
     ]
+    
+    # Define table properties for positioning the title
+    table_x_start = 4.75 * inch
+    table_y_start = height - 6.5 * inch
+    table_width = 2.4 * inch
+    table_height = 1.6 * inch # (4 rows * 0.4 inch height)
+
+    # Set font and draw the title string above the table
+    c.setFont("Helvetica", 12)
+    title_x = table_x_start + (table_width / 2) # Center of the table
+    title_y = table_y_start + table_height + 0.1 * inch # Top of table + a small margin
+    c.drawCentredString(title_x, title_y, "Heart Rate (BPM)")
+    
+    # Draw the original table (no title row)
     hr_table = Table(hr_data, colWidths=[1.2*inch]*2, rowHeights=0.4*inch)
     hr_table.setStyle(TableStyle([
-        # General Styles
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'), 
         ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        
-        # Title-specific Styles
-        ('SPAN', (0,0), (1,0)), # Span the title cell from col 0, row 0 to col 1, row 0
-        ('BACKGROUND', (0,0), (1,0), colors.lightgrey), # Add a background color to the title
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), # Make the title font bold
-        
-        # Data Styles (note the starting row is now 1)
-        ('FONTNAME', (0,1), (0,-1), 'Helvetica-Bold') # Make the first column (labels) bold
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), 
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold')
     ]))
-    hr_table.wrapOn(c, 2.4*inch, 2*inch)
-    hr_table.drawOn(c, 4.75*inch, height - 6.0*inch)
+
+    hr_table.wrapOn(c, table_width, table_height)
+    hr_table.drawOn(c, table_x_start, table_y_start)
 
     if hr_dist_path and os.path.exists(hr_dist_path):
         c.drawImage(hr_dist_path, 0.5*inch, height - 9.5*inch, width=width-1*inch, height=2.8*inch, preserveAspectRatio=True)
@@ -243,7 +249,7 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
         p_style = styles['Italic']
         p_style.fontSize = 9
         explanation_text = """This table shows your median Heart Rate Variability (RMSSD) calculated 
-        during sleep. We also show the natural log of RMSSD in brackets, which 'normalises' the value. 
+        during sleep. We also show the natural log of RMSSD in brackets, which normalises the value. 
         This is useful because factors like alcohol or stress can raise your heart rate, 
         which in turn lowers your HRV. The normalised value helps to reduce this effect, 
         giving a clearer picture of your nervous system's recovery."""
