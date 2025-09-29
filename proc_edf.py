@@ -39,10 +39,13 @@ acc_sedentary_thrs = 4  # in mg
 
 # Activity Thresholds in milli-g (mg)
 ACTIVITY_THRESHOLDS = {
-    'light': 20,
-    'moderate': 80,
-    'vigorous': 150
+    'light': 15,  # Start of light activity
+    'moderate': 50, # Start of moderate activity (e.g., brisk walking)
+    'vigorous': 120 # Start of vigorous activity (e.g., running, cycling)
 }
+
+# New, lower threshold to define resting/sleep periods (hypothetical value for now)
+CHEST_SEDENTARY_THRS = 10 # in mg
 
 # Multiprocessing and ECG Processing Functions 
 def init_worker():
@@ -94,7 +97,7 @@ def procECG(f, i, chunk_samples, signal_label='ECG', fs=250):
     c1.fillna(False, inplace=True)
     c2.fillna(False, inplace=True)
     c3.fillna(False, inplace=True)
-    
+
     df_qc['passed_finalQC'] = (c1 & c2 & c3 & df_qc['passed_initialQC'])
     df_qc.loc[~df_qc['passed_finalQC'], 'RRm'] = np.nan
     print(f"--> processed day: {i+1}")
