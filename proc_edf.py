@@ -104,21 +104,6 @@ def procECG(f, i, chunk_samples, signal_label='ECG', fs=250):
     return df_qc
 
 
-def calculate_daily_hrv_summary(df_qc, acc_sedentary_thrs):
-    """Calculates the daily median of 5-minute median RMSSD values during sedentary periods."""
-    # This function is correct.
-    df_hrv = df_qc[(df_qc['passed_finalQC']) & (df_qc['acc_imputed'] < acc_sedentary_thrs)].copy()
-    if df_hrv.empty: return None
-    df_hrv['date'] = df_hrv['time'].dt.date
-    df_hrv['bin_5min'] = df_hrv.index // 300
-    rmssd_5min = df_hrv.groupby(['date', 'bin_5min'])['rmssd'].median()
-    daily_hrv = rmssd_5min.groupby('date').median()
-    if daily_hrv.empty: return None
-    daily_hrv_summary = daily_hrv.to_frame(name='rmssd')
-    daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
-    return daily_hrv_summary
-
-
 def calculate_summary_metrics(df_qc, sleep_thrs):
     """
     Resamples data to 1-minute windows and calculates robust summary metrics.
@@ -141,6 +126,7 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
 
     # 4. Isolate resting (sleep) periods using the low acceleration threshold
     resting_periods = df_1min[df_1min['acc_imputed'] < sleep_thrs]
+    print(f"Found {len(resting_periods)} resting periods (1-min segments with acc < {sleep_thrs} mg)")
 
     if not resting_periods.empty:
         # 5. Calculate Resting HR and Resting HRV from these quiet periods
@@ -222,9 +208,6 @@ def procEDF(edf_file, m_qrs):
         for key, value in summary_metrics.items():
             dat_info[key] = value
 
-        # The daily HRV summary for the report table is still useful
-        daily_hrv_summary = calculate_daily_hrv_summary(df_qc, SLEEP_THRS)
-
         # Final HR column for plotting
         df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
         
@@ -267,7 +250,7 @@ def procEDF(edf_file, m_qrs):
         hr_dist_path = plot_hr_distribution(df_qc, save_path=os.path.join(plots_path, base_filename + "_hr_distribution.png"))
         daily_bars_path = plot_daily_activity_bars(df_qc.copy(), ACTIVITY_THRESHOLDS, save_path=os.path.join(plots_path, base_filename + "_daily_bars.png"))
         
-        create_pdf_report(dat_info, subject_output_path, edf_file, ACTIVITY_THRESHOLDS, num_days, daily_bars_path, profile_plot_path, daily_hrv_summary, pie_chart_path, hr_dist_path)
+        create_pdf_report(dat_info, subject_output_path, edf_file, ACTIVITY_THRESHOLDS, num_days, daily_bars_path, profile_plot_path, pie_chart_path, hr_dist_path)
         
         Ts.append(['create_report', time.time()])
         df_time = pd.DataFrame(Ts, columns=['task', 't'])
