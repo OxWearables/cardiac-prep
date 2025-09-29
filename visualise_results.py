@@ -8,7 +8,7 @@ import os
 import glob
 
 # TODO CHANGE THIS to the base name of the subject you want to plot 
-subject_id = "001" 
+subject_id = "REDACTED_ID" 
 base_output_path = "./output/"
 
 def load_detailed_data(subject_path):
@@ -58,17 +58,17 @@ if __name__ == '__main__':
         
         if df_qc is not None:
             # Create a folder for these new plots if it doesn't exist
-            visualization_path = os.path.join(subject_path, "visualizations")
-            os.makedirs(visualization_path, exist_ok=True)
+            visualisation_path = os.path.join(subject_path, "visualisations")
+            os.makedirs(visualisation_path, exist_ok=True)
             
-            print(f"\n--- Generating advanced plots for {subject_id} ---")
+            print(f"Generating heatmaps for {subject_id}")
             
             plot_weekly_heatmap(
                 df_qc.copy(), # Use a copy to avoid modifying the original df
                 column='HRm_imputed', 
                 title=f'Average Heart Rate by Hour and Day ({subject_id})',
                 cbar_label='Heart Rate (BPM)',
-                save_path=os.path.join(visualization_path, f"{subject_id}_hr_heatmap.png")
+                save_path=os.path.join(visualisation_path, f"{subject_id}_hr_heatmap.png")
             )
             
             plot_weekly_heatmap(
@@ -76,14 +76,8 @@ if __name__ == '__main__':
                 column='acc_imputed',
                 title=f'Average Activity by Hour and Day ({subject_id})',
                 cbar_label='Acceleration (milli-g)',
-                save_path=os.path.join(visualization_path, f"{subject_id}_acc_heatmap.png")
+                save_path=os.path.join(visualisation_path, f"{subject_id}_acc_heatmap.png")
             )
-            
-            thresholds = {'sedentary': 25, 'light': 100, 'moderate': 200}
-            plot_daily_activity_bars(
-                df_qc.copy(),
-                thresholds=thresholds,
-                save_path=os.path.join(visualization_path, f"{subject_id}_daily_activity_bars.png")
-            )
+                       
         else:
             print(f"Could not load detailed data for {subject_id}. No plots generated.")
