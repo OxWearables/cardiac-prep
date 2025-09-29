@@ -44,7 +44,7 @@ ACTIVITY_THRESHOLDS = {
 }
 
 # New, lower threshold to define resting/sleep periods (hypothetical value for now)
-SLEEP_THRS = 2 # in mg
+SLEEP_THRS = 1 # in mg
 
 # Multiprocessing and ECG Processing Functions 
 def init_worker():
