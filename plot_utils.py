@@ -202,14 +202,27 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
     
     # Heart Rate Table
     hr_data = [
+        ['Heart Rate (BPM)', None],  # Title row, second element is None for spanning
         ['Resting', f"{dat_info['HR_rest_robust'].iloc[0]:.1f}"], 
         ['Lowest', f"{dat_info['HR_min'].iloc[0]:.1f}"],
         ['Average', f"{dat_info['HR_mean'].iloc[0]:.1f}"], 
         ['Highest', f"{dat_info['HR_max'].iloc[0]:.1f}"]
     ]
     hr_table = Table(hr_data, colWidths=[1.2*inch]*2, rowHeights=0.4*inch)
-    hr_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('GRID', (0,0), (-1,-1), 1, colors.black),
-                                  ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold')]))
+    hr_table.setStyle(TableStyle([
+        # General Styles
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        
+        # Title-specific Styles
+        ('SPAN', (0,0), (1,0)), # Span the title cell from col 0, row 0 to col 1, row 0
+        ('BACKGROUND', (0,0), (1,0), colors.lightgrey), # Add a background color to the title
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), # Make the title font bold
+        
+        # Data Styles (note the starting row is now 1)
+        ('FONTNAME', (0,1), (0,-1), 'Helvetica-Bold') # Make the first column (labels) bold
+    ]))
     hr_table.wrapOn(c, 2.4*inch, 2*inch)
     hr_table.drawOn(c, 4.75*inch, height - 6.0*inch)
 
