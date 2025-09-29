@@ -175,8 +175,12 @@ def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
         return None
         
     daily_hrv_summary = daily_hrv.to_frame(name='rmssd')
-    daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
-
+    try:
+        daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
+    except TypeError:
+        print("Warning: Could not calculate normalised HRV (np.log failed). Skipping.")
+        daily_hrv_summary['norm_hrv'] = np.nan
+        
     return daily_hrv_summary
 
 
