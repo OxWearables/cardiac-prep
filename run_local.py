@@ -37,8 +37,6 @@ def main():
         print(f"Error: No .edf or .EDF files found in '{input_directory}'")
         return
     
-    edf_files = [f for f in edf_files if "REDACTED_ID" in f]  # TODO Uncomment for testing with a single file 
-
     print(f"Found {len(edf_files)} EDF files to process using {n_processes} cores.")
 
     ## Run Processing in Parallel 
