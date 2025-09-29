@@ -112,8 +112,8 @@ if __name__ == '__main__':
         summary_df = pd.read_csv(SUMMARY_FILE_PATH)
         
         # Check if the required HRV column exists, which is the output of the latest proc_edf.py
-        if 'mean_daily_rmssd' not in summary_df.columns:
-            print("Error: The required column 'mean_daily_rmssd' was not found in the summary file.")
+        if 'median_daily_rmssd' not in summary_df.columns:
+            print("Error: The required column 'median_daily_rmssd' was not found in the summary file.")
             print("Please ensure you have run the latest version of 'proc_edf.py'.")
         else:
             print("Successfully loaded summary data. Generating dataset plots...")

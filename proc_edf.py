@@ -45,7 +45,7 @@ ACTIVITY_THRESHOLDS = {
 }
 
 # New, lower threshold to define resting/sleep periods (hypothetical value for now)
-CHEST_SEDENTARY_THRS = 10 # in mg
+SLEEP_THRS = 10 # in mg
 
 # Multiprocessing and ECG Processing Functions 
 def init_worker():
@@ -119,6 +119,40 @@ def calculate_daily_hrv_summary(df_qc, acc_sedentary_thrs):
     return daily_hrv_summary
 
 
+def calculate_summary_metrics(df_qc, sleep_thrs):
+    """
+    Resamples data to 1-minute windows and calculates robust summary metrics.
+    """
+    if df_qc.empty:
+        return {} # Return an empty dictionary if there's no data
+
+    # 1. Resample 10-second data to 1-minute averages of RRm, rmssd, and acc
+    df_1min = df_qc.resample('1min', on='time').mean()
+
+    # 2. Calculate the 1-minute average heart rate (just translate RR to HR)
+    df_1min['HR_1min'] = 60 * 1000 / df_1min['RRm_imputed']
+    
+    # 3. Pick the 1-min segments with min, max, and mean avg HR
+    summary = {
+        'HR_min': df_1min['HR_1min'].min(),
+        'HR_max': df_1min['HR_1min'].max(),
+        'HR_mean': df_1min['HR_1min'].mean()
+    }
+
+    # 4. Isolate resting (sleep) periods using the low acceleration threshold
+    resting_periods = df_1min[df_1min['acc_imputed'] < sleep_thrs]
+
+    if not resting_periods.empty:
+        # 5. Calculate Resting HR and Resting HRV from these quiet periods
+        summary['HR_rest_robust'] = resting_periods['HR_1min'].median() # use median instead of mean for robustness
+        summary['median_daily_rmssd'] = resting_periods['rmssd'].median() # use median instead of mean for robustness
+    else:
+        # Provide fallback values if no resting periods are found
+        summary['HR_rest_robust'] = np.nan
+        summary['median_daily_rmssd'] = np.nan
+        
+    return summary
+
 # Main Processing Function
 def procEDF(edf_file, m_qrs):
     """Main processing pipeline for a single EDF file."""
@@ -181,24 +215,31 @@ def procEDF(edf_file, m_qrs):
         df_qc = doImp(df_qc, 'RRm')
         df_qc = doImp(df_qc, 'acc')
         
-        daily_hrv_summary = calculate_daily_hrv_summary(df_qc, acc_sedentary_thrs)
-
-        df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
-        dat_info['HR_mean'] = df_qc['HRm_imputed'].mean()
-        sedentary_hr = df_qc.loc[df_qc['acc_imputed'] < acc_sedentary_thrs, 'HRm_imputed']
-        dat_info['HR_rest_robust'] = sedentary_hr.rolling(window=180, min_periods=60).mean().min() if not sedentary_hr.empty else np.nan
+        # Calculate all summary metrics using the new 1-minute window method
+        summary_metrics = calculate_summary_metrics(df_qc, SLEEP_THRS)
         
+        # Update the main dat_info DataFrame with these new, robust values
+        for key, value in summary_metrics.items():
+            dat_info[key] = value
+
+        # The daily HRV summary for the report table is still useful
+        daily_hrv_summary = calculate_daily_hrv_summary(df_qc, SLEEP_THRS)
+
+        # Final HR column for plotting
+        df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
+        
+        # Time in activity zones calculation (uses the new chest thresholds)
         acc_series = df_qc.loc[df_qc['device_worn'], 'acc_imputed']
         dat_info['hours_sedentary'] = (acc_series < ACTIVITY_THRESHOLDS['light']).sum() * 10 / 3600
         dat_info['hours_light_activity'] = ((acc_series >= ACTIVITY_THRESHOLDS['light']) & (acc_series < ACTIVITY_THRESHOLDS['moderate'])).sum() * 10 / 3600
         dat_info['hours_moderate_activity'] = ((acc_series >= ACTIVITY_THRESHOLDS['moderate']) & (acc_series < ACTIVITY_THRESHOLDS['vigorous'])).sum() * 10 / 3600
         dat_info['hours_vigorous_activity'] = (acc_series >= ACTIVITY_THRESHOLDS['vigorous']).sum() * 10 / 3600
         
+        # Final wrap-up stats
         dat_info['wear_time_ECG_10s'] = df_qc["device_worn"].mean()
         dat_info['prop_ECG_passed_finalQC'] = df_qc['passed_finalQC'].mean()
-        dat_info['mean_daily_rmssd'] = daily_hrv_summary['rmssd'].mean() if daily_hrv_summary is not None else np.nan
         dat_info['frac_RR_imp'] = df_qc['RRm_isImputed'].mean()
-
+        
         df_qc.to_csv(os.path.join(data_path, base_filename + "_df_qc.csv.gz"), compression='gzip')
         plotFunc(df_qc=df_qc.copy(), outpath=plots_path, edf_file=edf_file, mrk_hr='HRm_imputed', mrk_acc='acc_imputed')
 
