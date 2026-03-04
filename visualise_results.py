@@ -8,7 +8,7 @@ import os
 import glob
 
 # TODO CHANGE THIS to the base name of the subject you want to plot 
-subject_id = "REDACTED_ID" 
+subject_id = "xx" 
 base_output_path = "./output/"
 
 def load_detailed_data(subject_path):
