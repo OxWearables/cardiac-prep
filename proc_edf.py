@@ -57,7 +57,7 @@ def init_worker():
     m_qrs = load_model("./models/QRS_detector_125Hz_080525.keras")
 
 
-def procECG(f, i, chunk_samples, signal_label='ECG', fs=250):
+def procECG(f, i, chunk_samples, fname, signal_label='ECG', fs=250):
     """Processes a single chunk of ECG data."""
     # This function is correct and remains unchanged.
     start = i * chunk_samples
@@ -99,7 +99,7 @@ def procECG(f, i, chunk_samples, signal_label='ECG', fs=250):
 
     df_qc['passed_finalQC'] = (c1 & c2 & c3 & df_qc['passed_initialQC'])
     df_qc.loc[~df_qc['passed_finalQC'], 'RRm'] = np.nan
-    print(f"--> processed day: {i+1}")
+    print(f"--> processed day: {i+1} for {fname}")
     return df_qc
 
 
@@ -211,7 +211,7 @@ def procEDF(edf_file, m_qrs):
 
     try:
         with pyedflib.EdfReader(edf_file) as f:
-            df_qc_list = [procECG(f, i, chunk_samples) for i in range(n_chunks)]
+            df_qc_list = [procECG(f, i, chunk_samples, base_filename) for i in range(n_chunks)]
         
         df_qc = pd.concat(
             [df.dropna(axis=1, how='all') for df in df_qc_list if df is not None and not df.empty], 
