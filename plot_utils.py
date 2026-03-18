@@ -268,20 +268,37 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
             lambda row: f"{row['rmssd']:.1f} ({row['norm_hrv']:.2f})" if pd.notna(row['rmssd']) else "No Data", 
             axis=1
         ).tolist()
-        # Correctly slice data for n-1 nights.
-        # We use formatted_values[1:] because the HRV for the night of "Day 1 / Day 2" is typically
-        # calculated from the sleep data recorded on the morning of "Day 2".
-        data_row = ['RMSSD (Norm)'] + formatted_values[1:]
-        table_data = [headers, date_row, data_row]
-      
-        # The number of data columns is now num_nights
-        t = Table(table_data, colWidths=[1.2*inch] + [1.0*inch] * num_nights)
-        t.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 1, colors.black), ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                               ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTNAME', (0,1), (0,-1), 'Helvetica-Bold')]))
-        
-        t.wrapOn(c, width - 2*inch, height)
-        t.drawOn(c, (width - t._width) / 2, y_cursor - t._height)
-        y_cursor -= (t._height + 0.5 * inch)
+
+        # Updated: Chunk the table to prevent running off the page 
+        max_days_per_row = 6 # Set maximum columns per table 
+        for i in range(0, num_nights, max_days_per_row):
+            chunk_end = min(i + max_days_per_row, num_nights)
+            chunk_size = chunk_end - i
+            
+            # Build headers and rows for just this chunk
+            chunk_headers = [''] + [f"Night {j+1}" for j in range(i, chunk_end)]
+            chunk_date_row = ['Date'] + [f"{dates[j]}/{dates[j+1].split()[-1]}" for j in range(i, chunk_end)]
+            chunk_data_row = ['RMSSD (Norm)'] + formatted_values[i+1 : chunk_end+1]
+            
+            table_data = [chunk_headers, chunk_date_row, chunk_data_row]
+          
+            # Create the table for this chunk
+            t = Table(table_data, colWidths=[1.2*inch] + [1.0*inch] * chunk_size)
+            t.setStyle(TableStyle([
+                ('GRID', (0,0), (-1,-1), 1, colors.black), 
+                ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), 
+                ('FONTNAME', (0,1), (0,-1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0,0), (-1,-1), 9) # Slightly smaller font to ensure things fit cleanly
+            ]))
+            
+            # Draw table and move the cursor down for the next chunk
+            t.wrapOn(c, width - 2*inch, height)
+            t.drawOn(c, (width - t._width) / 2, y_cursor - t._height)
+            y_cursor -= (t._height + 0.2 * inch) # Gap between stacked tables
+            
+        y_cursor -= 0.3 * inch # Extra padding before the next image
 
     if daily_bars_path and os.path.exists(daily_bars_path):
         c.drawImage(daily_bars_path, 0.5*inch, y_cursor - 4.5*inch, width=width-1*inch, height=4*inch, preserveAspectRatio=True)
