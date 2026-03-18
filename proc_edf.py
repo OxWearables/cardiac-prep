@@ -265,6 +265,7 @@ def procEDF(edf_file, m_qrs):
         # Final wrap-up stats
         dat_info['wear_time_ECG_10s'] = df_qc["device_worn"].mean()
         dat_info['prop_ECG_passed_finalQC'] = df_qc['passed_finalQC'].mean()
+        dat_info['prop_ECG_worn_passed_finalQC'] = mean_qc # Taken from mean_qc calculation above
         dat_info['frac_RR_imp'] = df_qc['RRm_isImputed'].mean()
         
         df_qc.to_csv(os.path.join(data_path, base_filename + "_df_qc.csv.gz"), compression='gzip')
