@@ -270,7 +270,7 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
         ).tolist()
 
         # Updated: Chunk the table to prevent running off the page 
-        max_days_per_row = 6 # Set maximum columns per table 
+        max_days_per_row = 5 # Set maximum columns per table 
         for i in range(0, num_nights, max_days_per_row):
             chunk_end = min(i + max_days_per_row, num_nights)
             chunk_size = chunk_end - i
@@ -297,7 +297,7 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
             t.wrapOn(c, width - 2*inch, height)
             t.drawOn(c, (width - t._width) / 2, y_cursor - t._height)
             y_cursor -= (t._height + 0.2 * inch) # Gap between stacked tables
-            
+
         y_cursor -= 0.3 * inch # Extra padding before the next image
 
     if daily_bars_path and os.path.exists(daily_bars_path):
