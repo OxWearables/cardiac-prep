@@ -48,9 +48,8 @@ def plotECG_failedQC(f, df_f, plotpath, fs=250, chunk_samples=2500, signal_label
         axes[i].set_yticklabels([])
         axes[i].set_title(df_f['time'].loc[idx].strftime('%d-%m %H:%M:%S'), fontsize=8)
         
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
     fig.suptitle("Examples of ECG Segments Failing Quality Control", fontsize=12)
-    fig.savefig(plotpath)
+    fig.savefig(plotpath, bbox_inches='tight')
     plt.close(fig)
 
 def plotFunc(df_qc,edf_file,outpath, days_per_row = 3, mrk_hr='HRm',mrk_acc='acc'):
@@ -106,11 +105,8 @@ def plotFunc(df_qc,edf_file,outpath, days_per_row = 3, mrk_hr='HRm',mrk_acc='acc
         ax.grid()
     
         fig.suptitle(os.path.basename(edf_file), fontsize=8)
-        plt.tight_layout() #rect=[0, 0, 1, 0.96])  # leave space for title
-
-         # Save the entire figure AFTER the loop is complete
-
-        fig.savefig(os.path.join(outpath, os.path.basename(edf_file) + '_HRm_Acc_Plot.pdf'))
+        fig.savefig(os.path.join(outpath, os.path.basename(edf_file) + '_HRm_Acc_Plot.pdf'), bbox_inches='tight')
+        
         plt.close(fig)
 
 
@@ -126,7 +122,7 @@ def plot_hr_distribution(df, save_path):
     sns.histplot(hr_data[hr_data <= hr_upper_limit], kde=True, ax=ax, bins=50, color=PRIMARY_BLUE)
     ax.set_title('Heart Rate Distribution (from High-Quality Data)', fontsize=14)
     ax.set_xlabel('Heart Rate (BPM)'); ax.set_ylabel('Count (10s Segments)')
-    plt.tight_layout(); fig.savefig(save_path, dpi=150); plt.close(fig)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150); plt.close(fig)
     return save_path
 
 def plot_activity_pie_chart(dat_info, save_path):
@@ -145,7 +141,7 @@ def plot_activity_pie_chart(dat_info, save_path):
     ax.add_artist(plt.Circle((0, 0), 0.70, fc='white'))
     ax.axis('equal'); ax.set_title("Average Daily Activity", y=1.08, fontsize=16)
     ax.legend(wedges, labels, title="Activity Zone", loc="center left", bbox_to_anchor=(0.9, 0, 0.5, 1))
-    plt.tight_layout(); fig.savefig(save_path, dpi=150, bbox_inches='tight'); plt.close(fig)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150, bbox_inches='tight'); plt.close(fig)
     return save_path
 
 def plot_daily_activity_bars(df, thresholds, save_path):
@@ -160,7 +156,7 @@ def plot_daily_activity_bars(df, thresholds, save_path):
     daily_hours.plot(kind='bar', stacked=True, ax=ax, color=[SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED], width=0.8)
     ax.set_title("Time in Activity Zones per Day", fontsize=16); ax.set_ylabel("Hours"); ax.set_xlabel("Date")
     ax.legend(title="Activity Zone"); ax.tick_params(axis='x', rotation=45)
-    plt.tight_layout(); fig.savefig(save_path, dpi=150); plt.close(fig)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150); plt.close(fig)
     return save_path
 
 def plot_24hr_profile_for_report(df_24hr, save_path):
@@ -176,7 +172,7 @@ def plot_24hr_profile_for_report(df_24hr, save_path):
     ax.set_title('Typical 24-Hour Heart Rate Profile', fontsize=16)
     ax.set_xlabel('Time of Day'); ax.set_ylabel('Median Heart Rate (BPM)')
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.tight_layout(); fig.savefig(save_path, dpi=150); plt.close(fig)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150); plt.close(fig)
     return save_path
 
 def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_days, daily_bars_path, profile_plot_path, daily_hrv_summary, pie_chart_path, hr_dist_path):

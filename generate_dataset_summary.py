@@ -38,8 +38,7 @@ def plot_hrv_vs_rhr(df, save_path):
     ax.set_xlabel('Robust Resting HR (BPM)', fontsize=12)
     ax.set_ylabel('Mean Daily RMSSD (ms)', fontsize=12)
     
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150)
+    plt.savefig(save_path, bbox_inches='tight', dpi=150)
     print(f"Dataset RHR vs. HRV plot saved to: {save_path}")
     plt.close(fig)
 

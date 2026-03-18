@@ -42,8 +42,7 @@ def plot_weekly_heatmap(df, column, title, cbar_label, save_path):
     ax.set_xlabel("Hour of Day")
     ax.set_ylabel("Day of Week")
     
-    plt.tight_layout()
-    fig.savefig(save_path, dpi=150)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150)
     plt.close(fig)
     print(f"Generated heatmap: {os.path.basename(save_path)}")
 
