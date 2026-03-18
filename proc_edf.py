@@ -213,7 +213,10 @@ def procEDF(edf_file, m_qrs):
         with pyedflib.EdfReader(edf_file) as f:
             df_qc_list = [procECG(f, i, chunk_samples) for i in range(n_chunks)]
         
-        df_qc = pd.concat([df for df in df_qc_list if df is not None and not df.empty], ignore_index=True)
+        df_qc = pd.concat(
+            [df.dropna(axis=1, how='all') for df in df_qc_list if df is not None and not df.empty], 
+            ignore_index=True
+        )
 
         if df_qc.empty:
             raise ValueError("No valid ECG chunks found after processing.")
