@@ -13,6 +13,10 @@ This repository contains an end-to-end Python pipeline for processing multi-day 
 * **Automated Reporting**: Generates a detailed, 2-page PDF summary report for each participant.
 * **Dataset Summarisation**: Creates summary plots for the entire dataset to visualise population-level trends.
 
+## Prerequisites 📝
+* Python >= 3.9 and < 3.13
+* ```pip``` (Python package manager)
+
 ## How to Use 🚀
 
 ### 1. Clone the Repository
