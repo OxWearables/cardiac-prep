@@ -225,7 +225,7 @@ def procEDF(edf_file, m_qrs):
         df_qc['time'] = pd.to_datetime(start_time) + pd.to_timedelta(df_qc.index, unit='s')
         
         mean_qc = df_qc.loc[df_qc['device_worn'], 'passed_finalQC'].mean()
-        if mean_qc < 0.9:
+        if mean_qc < 0.75:
             print(f"Warning: Low data quality. Only {mean_qc:.1%} of ECG passed final QC.")
             df_f = df_qc[(~df_qc['passed_finalQC']) & (df_qc['device_worn'])].sample(n=min(25, len(df_qc)))
             with pyedflib.EdfReader(edf_file) as f:
