@@ -141,7 +141,7 @@ def plot_activity_pie_chart(dat_info, save_path):
     ax.add_artist(plt.Circle((0, 0), 0.70, fc='white'))
     ax.axis('equal'); ax.set_title("Average Daily Activity", y=1.08, fontsize=16)
     ax.legend(wedges, labels, title="Activity Zone", loc="center left", bbox_to_anchor=(0.9, 0, 0.5, 1))
-    fig.savefig(save_path, bbox_inches='tight', dpi=150, bbox_inches='tight'); plt.close(fig)
+    fig.savefig(save_path, bbox_inches='tight', dpi=150); plt.close(fig)
     return save_path
 
 def plot_daily_activity_bars(df, thresholds, save_path):

@@ -24,6 +24,7 @@ def main():
     input_directory = "./input_data/"
     # TODO Point this to where you want summary CSV files to be saved
     output_directory = "./output/"
+    os.makedirs(output_directory, exist_ok=True)
     # Number of CPU cores to use. os.cpu_count() uses all available cores.
     n_processes = os.cpu_count() - 1 # EDITED: Leave one core free
 
