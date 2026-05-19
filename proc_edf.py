@@ -36,15 +36,19 @@ RRmin = 250  # 0.25 seconds in ms
 RRmax = 2500  # 2.5 seconds in ms
 N_RR_outliers_max = 1
 
-# Activity Thresholds in milli-g (mg)
+# Activity Thresholds in milli-g (mg) - Etzkorn et al. (2024), Zio XT chest-worn MAD cut-points
+# Derived from n=381 older adults (ARIC study), mapped from validated waist-worn ActiGraph GT3X
+# NOTE: validated in older adults (median age 78); interpret with caution in younger populations
 ACTIVITY_THRESHOLDS = {
-    'light': 15,  # Start of light activity
-    'moderate': 50, # Start of moderate activity (e.g., brisk walking)
-    'vigorous': 120 # Start of vigorous activity (e.g., running, cycling)
+    'very_light': 9.04,   # Etzkorn et al. (2024) Table 2
+    'light':      28.19,  # Etzkorn et al. (2024) Table 2
+    'moderate':   58.08,  # Etzkorn et al. (2024) Table 2 - no separate vigorous threshold defined
 }
 
-# New, lower threshold to define resting/sleep periods (hypothetical value for now)
-SLEEP_THRS = 2 # in mg
+# Sleep/sedentary threshold: anything below very_light is sleep+sedentary
+# The Zio paper does not separate sleep from sedentary; that distinction is
+# handled downstream by the nighttime window filter in calculate_summary_metrics()
+SLEEP_THRS = 9.04  # in mg — aligned with Zio VLIPA lower bound
 
 # Multiprocessing and ECG Processing Functions 
 def init_worker():
@@ -55,6 +59,29 @@ def init_worker():
     tf.config.threading.set_intra_op_parallelism_threads(1)
     tf.config.threading.set_inter_op_parallelism_threads(1)
     m_qrs = load_model("./models/QRS_detector_125Hz_080525.keras")
+
+
+def compute_mad(ax, ay, az, epoch_samples):
+    """
+    Compute Mean Amplitude Deviation over fixed-length epochs.
+    
+    ax, ay, az: raw accelerometer arrays (in mg or g, consistent units)
+    epoch_samples: number of samples per epoch (e.g. 500 for 5s at 100Hz)
+    
+    Returns array of MAD values, one per epoch, in same units as input.
+    """
+    # Vector magnitude at each sample
+    vm = np.sqrt(ax**2 + ay**2 + az**2)
+    
+    n_epochs = len(vm) // epoch_samples
+    mad_values = []
+    
+    for i in range(n_epochs):
+        epoch = vm[i * epoch_samples : (i + 1) * epoch_samples]
+        mad = np.mean(np.abs(epoch - np.mean(epoch)))
+        mad_values.append(mad)
+    
+    return np.array(mad_values)
 
 
 def procECG(f, i, chunk_samples, fname, signal_label='ECG', fs=250):
@@ -255,12 +282,12 @@ def procEDF(edf_file, m_qrs):
         # Final HR column for plotting
         df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
         
-        # Time in activity zones calculation (uses the new chest thresholds)
+        # Time in activity zones (Etzkorn et al. 2024 chest-worn MAD thresholds)
         acc_series = df_qc.loc[df_qc['device_worn'], 'acc_imputed']
-        dat_info['hours_sedentary'] = (acc_series < ACTIVITY_THRESHOLDS['light']).sum() * 10 / 3600
-        dat_info['hours_light_activity'] = ((acc_series >= ACTIVITY_THRESHOLDS['light']) & (acc_series < ACTIVITY_THRESHOLDS['moderate'])).sum() * 10 / 3600
-        dat_info['hours_moderate_activity'] = ((acc_series >= ACTIVITY_THRESHOLDS['moderate']) & (acc_series < ACTIVITY_THRESHOLDS['vigorous'])).sum() * 10 / 3600
-        dat_info['hours_vigorous_activity'] = (acc_series >= ACTIVITY_THRESHOLDS['vigorous']).sum() * 10 / 3600
+        dat_info['hours_sleep_sedentary'] = (acc_series < ACTIVITY_THRESHOLDS['very_light']).sum() * 10 / 3600
+        dat_info['hours_very_light']      = ((acc_series >= ACTIVITY_THRESHOLDS['very_light']) & (acc_series < ACTIVITY_THRESHOLDS['light'])).sum() * 10 / 3600
+        dat_info['hours_light_activity']  = ((acc_series >= ACTIVITY_THRESHOLDS['light'])      & (acc_series < ACTIVITY_THRESHOLDS['moderate'])).sum() * 10 / 3600
+        dat_info['hours_mvpa']            = (acc_series >= ACTIVITY_THRESHOLDS['moderate']).sum() * 10 / 3600
         
         # Final wrap-up stats
         dat_info['wear_time_ECG_10s'] = df_qc["device_worn"].mean()
