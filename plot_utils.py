@@ -127,10 +127,12 @@ def plot_hr_distribution(df, save_path):
 
 def plot_activity_pie_chart(dat_info, save_path):
     """Generates a donut chart of the average daily activity distribution."""
-    labels = ['Sedentary', 'Light', 'Moderate', 'Vigorous']
+    labels = ['Sleep/Sedentary', 'Very Light', 'Light', 'Moderate-Vigorous']
     sizes = [
-        dat_info['hours_sedentary'].iloc[0], dat_info['hours_light_activity'].iloc[0],
-        dat_info['hours_moderate_activity'].iloc[0], dat_info['hours_vigorous_activity'].iloc[0]
+        dat_info['hours_sleep_sedentary'].iloc[0],
+        dat_info['hours_very_light'].iloc[0],
+        dat_info['hours_light_activity'].iloc[0],
+        dat_info['hours_mvpa'].iloc[0]
     ]
     colours = [SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED]
     non_zero_elements = [(s, l, c) for s, l, c in zip(sizes, labels, colours) if s > 0.01]
@@ -146,15 +148,17 @@ def plot_activity_pie_chart(dat_info, save_path):
 
 def plot_daily_activity_bars(df, thresholds, save_path):
     """Generates a stacked bar chart of time in activity zones for each day."""
-    labels = ['Sedentary', 'Light', 'Moderate', 'Vigorous']
-    bins = [-np.inf, thresholds['light'], thresholds['moderate'], thresholds['vigorous'], np.inf]
+    labels = ['Sleep/Sedentary', 'Very Light', 'Light', 'Moderate-Vigorous']
+    bins = [-np.inf, thresholds['very_light'], thresholds['light'], thresholds['moderate'], np.inf]
     df['activity_zone'] = pd.cut(df['acc_imputed'], bins=bins, labels=labels, right=False)
     daily_counts = df.groupby([df['time'].dt.date, 'activity_zone']).size().unstack(fill_value=0)
     daily_hours = daily_counts * 10 / 3600
     daily_hours.index = [d.strftime('%b %d') for d in daily_hours.index]
     fig, ax = plt.subplots(figsize=(10, 6))
-    daily_hours.plot(kind='bar', stacked=True, ax=ax, color=[SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED], width=0.8)
-    ax.set_title("Time in Activity Zones per Day", fontsize=16); ax.set_ylabel("Hours"); ax.set_xlabel("Date")
+    daily_hours.plot(kind='bar', stacked=True, ax=ax,
+                     color=[SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED], width=0.8)
+    ax.set_title("Time in Activity Zones per Day", fontsize=16)
+    ax.set_ylabel("Hours"); ax.set_xlabel("Date")
     ax.legend(title="Activity Zone"); ax.tick_params(axis='x', rotation=45)
     fig.savefig(save_path, bbox_inches='tight', dpi=150); plt.close(fig)
     return save_path
