@@ -126,7 +126,7 @@ def prepSig(ecg,nseg=2500,fs=250, clip_val=4,var_range=[0.0001,2], min_ptp=0.025
     ix_non_clipped = np.mean(np.abs(ecg)>clip_val,axis=-1)<.05
 
     ecg = np.clip(ecg.flatten(), -clip_val, clip_val)
-    # 50Hz notch filter, yes - I have seen extreme noise in this band despite wearable device (i.e. REDACTED_ID)
+    # 50Hz notch filter, yes - I have seen extreme noise in this band despite wearable device 
     # Notch filter design
     f0 = 50.0  # Frequency to remove (Hz)
     Q = 30.0   # Quality factor (higher = narrower notch)
