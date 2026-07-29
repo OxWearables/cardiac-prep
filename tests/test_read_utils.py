@@ -48,6 +48,25 @@ def test_prepSig_flags_flatline_as_not_worn():
     assert not ix_qc.any()  # flatline cannot pass the variance/amplitude checks
 
 
+def test_prepSig_flags_constant_nonzero_signal_as_not_worn():
+    """A flat trace is non-wear even when the constant is not exactly zero.
+
+    np.std of a perfectly constant array can return about 1e-24 from rounding
+    in the mean, so a `std > 0` test called this worn. The value below is what
+    an all-zero EDF signal becomes after the usual asymmetric digital-range
+    round trip, divided by 1000 as procECG does.
+    """
+    flat_value = 1.5259021896696422e-08
+    assert np.std(np.full(NSEG, flat_value)) > 0, "fixture no longer exercises the bug"
+
+    ecg = np.full(NSEG * 2, flat_value)
+
+    _, i_device_worn, _, ix_qc = prepSig(ecg, nseg=NSEG, fs=FS)
+
+    assert not i_device_worn.any()
+    assert not ix_qc.any()
+
+
 def test_prepSig_flags_real_signal_as_worn():
     ecg = _sine(NSEG * 2)
 
