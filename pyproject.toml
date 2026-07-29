@@ -53,6 +53,7 @@ Repository = "https://github.com/OxWearables/preprocessing-edf"
 
 [project.scripts]
 edfproc = "edfproc.cli:main"
+edfproc-plot = "edfproc.subject_plots:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -78,5 +79,6 @@ src = ["src", "tests"]
 select = ["E9", "F", "I"]
 
 [tool.ruff.lint.per-file-ignores]
-# Path setup must precede the package import in the no-install entry point.
+# Path setup must precede the package import in the no-install entry points.
 "run_local.py" = ["E402"]
+"plot_subject.py" = ["E402"]
