@@ -1,71 +1,185 @@
 #!/usr/bin/env python3
 """
-Main script for the ECG and Accelerometer processing pipeline, can be run locally. 
+Main entry point for the ECG and Accelerometer processing pipeline.
 
-This script discovers all .EDF files in a specified input directory,
-distributes the processing of these files across all available CPU cores
-using multiprocessing, and aggregates the results into a single summary CSV file.
+Finds every .edf file in the input folder, processes them in parallel across
+CPU cores, and writes one results folder per recording plus a combined summary
+spreadsheet.
+
+Typical use, with settings taken from config.yaml:
+
+    python run_local.py
+
+Or point it somewhere else without editing any file:
+
+    python run_local.py --input /path/to/edfs --output /path/to/results
+
+Run 'python run_local.py --help' for all options.
 """
 __author__ = "Anna Bator"
 
-import os
-import glob
-import pandas as pd
+import argparse
 import multiprocessing as mp
-from proc_edf import procEDF_wrapper, init_worker
-import time 
+import os
+import sys
+import time
+from pathlib import Path
 
-def main():
-    """
-    Main function to find EDF files and process them in parallel.
-    """
-    start_time = time.time()
-    # TODO Point this to the directory containing your EDF files
-    input_directory = "./input_data/"
-    # TODO Point this to where you want summary CSV files to be saved
-    output_directory = "./output/"
-    os.makedirs(output_directory, exist_ok=True)
-    # Number of CPU cores to use. os.cpu_count() uses all available cores.
-    n_processes = os.cpu_count() - 1 # EDITED: Leave one core free
+import pandas as pd
 
-    # Create output directory if it doesn't exist
-    os.makedirs(output_directory, exist_ok=True)
-    
-    # Find all EDF files in the input directory
-    edf_files = glob.glob(os.path.join(input_directory, "*.EDF" )) + glob.glob(os.path.join(input_directory, "*.edf"))
-    
+from config import ConfigError, load_config
+from model_utils import ModelError, find_model
+
+EDF_SUFFIXES = (".edf",)
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="run_local.py",
+        description=(
+            "Process wearable ECG and accelerometer recordings from EDF files. "
+            "Settings come from config.yaml; the options below override it."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  python run_local.py\n"
+            "  python run_local.py --input ~/my_edfs --output ~/results\n"
+            "  python run_local.py --jobs 1        (one at a time, clearer errors)\n"
+            "  python run_local.py --dry-run       (list what would be processed)\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-i", "--input", metavar="FOLDER",
+        help="Folder containing .edf files. Overrides input_dir in config.yaml.",
+    )
+    parser.add_argument(
+        "-o", "--output", metavar="FOLDER",
+        help="Folder to write results into. Overrides output_dir in config.yaml.",
+    )
+    parser.add_argument(
+        "-c", "--config", metavar="FILE",
+        help="Path to a settings file. Defaults to config.yaml if present.",
+    )
+    parser.add_argument(
+        "-j", "--jobs", type=int, metavar="N",
+        help="Number of recordings to process at once. Default: all cores but one.",
+    )
+    parser.add_argument(
+        "-m", "--model", metavar="FILE",
+        help="QRS detector weights (.keras). Default: the single .keras file in the models folder.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="List the files that would be processed, then exit without processing.",
+    )
+    return parser.parse_args(argv)
+
+
+def find_edf_files(input_dir):
+    """Return every EDF file in input_dir, matched case-insensitively.
+
+    Deduplicates by resolved path so a case-insensitive filesystem cannot
+    yield the same recording twice.
+    """
+    input_dir = Path(input_dir)
+    if not input_dir.is_dir():
+        raise FileNotFoundError(f"Input folder not found: '{input_dir}'")
+
+    seen = {}
+    for entry in sorted(input_dir.iterdir()):
+        if entry.is_file() and entry.suffix.lower() in EDF_SUFFIXES:
+            seen.setdefault(entry.resolve(), entry)
+    return [str(path) for path in sorted(seen.values())]
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
+    # Settings: file defaults first, then any command-line overrides.
+    try:
+        config = load_config(
+            path=Path(args.config) if args.config else None,
+            overrides={
+                "input_dir": args.input,
+                "output_dir": args.output,
+                "n_processes": args.jobs,
+                "model_path": args.model,
+            },
+        )
+    except ConfigError as exc:
+        print(f"\nConfiguration problem:\n\n{exc}\n", file=sys.stderr)
+        return 2
+
+    # Check the model before starting a long run, not thirty minutes into one.
+    try:
+        model_path = find_model(config.model_dir, config.model_path)
+    except ModelError as exc:
+        print(f"\nCould not load the QRS detector:\n\n{exc}\n", file=sys.stderr)
+        return 2
+
+    try:
+        edf_files = find_edf_files(config.input_dir)
+    except FileNotFoundError as exc:
+        print(f"\n{exc}\n", file=sys.stderr)
+        return 2
+
     if not edf_files:
-        print(f"Error: No .edf or .EDF files found in '{input_directory}'")
-        return
-        
-    print(f"Found {len(edf_files)} EDF files to process using {n_processes} cores.")
+        print(
+            f"\nNo .edf files found in '{config.input_dir}'.\n"
+            "Put your recordings there, or point elsewhere with --input.\n",
+            file=sys.stderr,
+        )
+        return 1
 
-    ## Run Processing in Parallel 
-    # This uses the same parallel processing logic as the original script
-    with mp.Pool(processes=n_processes, initializer=init_worker) as pool:
-        # pool.map applies the procEDF_wrapper function to each file in the edf_files list
+    n_processes = min(config.resolved_n_processes, len(edf_files))
+
+    print(f"Input:   {config.input_dir}")
+    print(f"Output:  {config.output_dir}")
+    print(f"Model:   {model_path.name}")
+    print(f"Files:   {len(edf_files)}")
+    print(f"Workers: {n_processes}")
+
+    if args.dry_run:
+        print("\nDry run - these files would be processed:")
+        for path in edf_files:
+            print(f"  {os.path.basename(path)}")
+        return 0
+
+    os.makedirs(config.output_dir, exist_ok=True)
+
+    # Imported here so --help and configuration errors stay fast: importing
+    # proc_edf pulls in the plotting stack, which is slow to load.
+    from proc_edf import init_worker, procEDF_wrapper
+
+    start_time = time.time()
+    with mp.Pool(
+        processes=n_processes,
+        initializer=init_worker,
+        initargs=(config,),
+    ) as pool:
         results = pool.map(procEDF_wrapper, edf_files)
 
-    # Aggregate and Save Results 
-    # Combine the summary DataFrames from all files into one
     df_info_all = pd.concat(results, ignore_index=True)
+    output_path = os.path.join(str(config.output_dir), "df_info_summary.csv.gz")
+    df_info_all.to_csv(output_path, compression="gzip", index=False)
 
-    # Save the aggregated summary file
-    output_path = os.path.join(output_directory, "df_info_summary.csv.gz")
-    df_info_all.to_csv(output_path, compression='gzip', index=False)
+    duration = time.time() - start_time
+    n_failed = int(df_info_all["failed"].sum()) if "failed" in df_info_all else 0
 
-    end_time = time.time()
-    total_duration = end_time - start_time
     print("\n-----------------------------------------")
-    print(f"Processing complete!")
-    print(f"   - Total files processed: {len(edf_files)}")
-    print(f"   - Total time elapsed: {total_duration / 60:.2f} minutes ({total_duration:.2f} seconds)")
-    print(f"   - Average time per file: {total_duration / len(edf_files):.2f} seconds")
-    print(f"   - Aggregated summary saved to: {output_path}")
+    print("Processing complete.")
+    print(f"   - Files processed:    {len(edf_files)}")
+    if n_failed:
+        print(f"   - Files that FAILED:  {n_failed}  (see errors above)")
+    print(f"   - Time elapsed:       {duration / 60:.2f} minutes")
+    print(f"   - Average per file:   {duration / len(edf_files):.2f} seconds")
+    print(f"   - Summary written to: {output_path}")
+    print(f"   - Per-file results:   {config.output_dir}")
     print("-----------------------------------------")
-    print(f"Aggregated summary saved to: {output_path}")
-    print("Individual file outputs (plots, detailed CSVs) are in the main project directory.")
+
+    return 1 if n_failed else 0
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())

@@ -12,53 +12,45 @@ __credits__ = "Stefan van Duijvenboden"
 ## This script is based on the original work by Stefan van Duijvenboden.
 
 import time
-import glob
 import os
 import pyedflib
 import numpy as np
 import pandas as pd
-import multiprocessing as mp
 import traceback
+from config import Config
+from model_utils import find_model, model_fingerprint
 from read_utils import readEDFECG_info, readACC, prepSig
 from proc_utils import doImp, getQRSmask, getQCmetrics, getQRS, downsampleECG
-from plot_utils import (plotFunc, plotECG_failedQC, create_pdf_report, 
-                        plot_hr_distribution, plot_activity_pie_chart, 
+from plot_utils import (plotFunc, plotECG_failedQC, create_pdf_report,
+                        plot_hr_distribution, plot_activity_pie_chart,
                         plot_daily_activity_bars, plot_24hr_profile_for_report)
 
-# Global Settings
-NSEG = 2500  # 10s segment length in samples at 250Hz
-Nchunk = int(3600 * 24)  # Process data in 24-hour chunks
+# Per-worker state. Populated by init_worker() in each pool process; on macOS
+# and Windows the pool uses 'spawn', so nothing set in the parent is inherited.
+m_qrs = None
+_CONFIG = None
+_MODEL_INFO = None
 
-# ECG QC settings
-RRCOVER_LIM = 0.75
-NBEATS_LIM = 5
-RRmin = 250  # 0.25 seconds in ms
-RRmax = 2500  # 2.5 seconds in ms
-N_RR_outliers_max = 1
 
-# Activity Thresholds in milli-g (mg) - Etzkorn et al. (2024), Zio XT chest-worn MAD cut-points
-# Derived from n=381 older adults (ARIC study), mapped from validated waist-worn ActiGraph GT3X
-# NOTE: validated in older adults (median age 78); interpret with caution in younger populations
-ACTIVITY_THRESHOLDS = {
-    'very_light': 9.04,   # Etzkorn et al. (2024) Table 2
-    'light':      28.19,  # Etzkorn et al. (2024) Table 2
-    'moderate':   58.08,  # Etzkorn et al. (2024) Table 2 - no separate vigorous threshold defined
-}
+def init_worker(config):
+    """Load the QRS model once per worker process.
 
-# Sleep/sedentary threshold: anything below very_light is sleep+sedentary
-# The Zio paper does not separate sleep from sedentary; that distinction is
-# handled downstream by the nighttime window filter in calculate_summary_metrics()
-SLEEP_THRS = 9.04  # in mg — aligned with Zio VLIPA lower bound
-
-# Multiprocessing and ECG Processing Functions 
-def init_worker():
-    """Initialiser function for the multiprocessing pool to load the ML model."""
-    global m_qrs
+    Loading in the initialiser rather than per file means the model is read
+    from disk once per core instead of once per recording.
+    """
+    global m_qrs, _CONFIG, _MODEL_INFO
     import tensorflow as tf
     from tensorflow.keras.models import load_model
+
+    # One TensorFlow thread per worker: the pool already provides parallelism,
+    # and letting TF spawn its own threads on top oversubscribes the CPU.
     tf.config.threading.set_intra_op_parallelism_threads(1)
     tf.config.threading.set_inter_op_parallelism_threads(1)
-    m_qrs = load_model("./models/QRS_detector_125Hz_080525.keras")
+
+    _CONFIG = config
+    model_path = find_model(config.model_dir, config.model_path)
+    _MODEL_INFO = model_fingerprint(model_path)
+    m_qrs = load_model(str(model_path))
 
 
 def compute_mad(ax, ay, az, epoch_samples):
@@ -84,40 +76,40 @@ def compute_mad(ax, ay, az, epoch_samples):
     return np.array(mad_values)
 
 
-def procECG(f, i, chunk_samples, fname, signal_label='ECG', fs=250):
+def procECG(f, i, chunk_samples, fname, cfg, model, signal_label='ECG', fs=250):
     """Processes a single chunk of ECG data."""
-    # This function is correct and remains unchanged.
+    nseg = cfg.segment_samples
     start = i * chunk_samples
     iECG = f.getSignalLabels().index(signal_label)
     ecg = f.readSignal(iECG, start=start, n=chunk_samples)
     ecg = ecg / 1000
-    ecg, i_device_worn, ix_non_clipped, ix_pre_qc = prepSig(ecg=ecg, fs=fs, nseg=NSEG)
+    ecg, i_device_worn, ix_non_clipped, ix_pre_qc = prepSig(ecg=ecg, fs=fs, nseg=nseg)
     ix_qc = i_device_worn & ix_non_clipped & ix_pre_qc
     df_qc = pd.DataFrame({'device_worn': i_device_worn, 'clipped_5perc_thrs': ~ix_non_clipped, 'passed_initialQC': ix_qc})
-    df_qc = df_qc.set_index(df_qc.index * 10)
+    df_qc = df_qc.set_index(df_qc.index * cfg.segment_seconds)
     if not np.any(ix_qc):
         df_qc['passed_finalQC'] = False
         return df_qc
     ecg_dc = downsampleECG(ecg[ix_qc], fs_org=fs)
     ecg = ecg.flatten()
-    qrs_mask = getQRSmask(ecg_dc, ix_qc, m_qrs)
+    qrs_mask = getQRSmask(ecg_dc, ix_qc, model)
     df_rw = getQRS(mask=qrs_mask, ecg=ecg)
     df_snr = pd.DataFrame(df_rw.groupby(df_rw.index).size(), columns=['N_beats'])
-    idx_u = df_snr[df_snr['N_beats'] >= NBEATS_LIM].index.unique()
+    idx_u = df_snr[df_snr['N_beats'] >= cfg.n_beats_min].index.unique()
     grouped_rw = df_rw.groupby(df_rw.index)
     t_rw_cache = {x: group['t_rw'].to_numpy() for x, group in grouped_rw}
-    rr_lim_samples = [int(RRmin / 1000 * fs), int(RRmax / 1000 * fs)]
-    results = [getQCmetrics(ecg, t_rw_cache[x], rr_lim=rr_lim_samples) for x in idx_u]
+    rr_lim_samples = [int(cfg.rr_min_ms / 1000 * fs), int(cfg.rr_max_ms / 1000 * fs)]
+    results = [getQCmetrics(ecg, t_rw_cache[x], rr_lim=rr_lim_samples, nseg=nseg) for x in idx_u]
     df_metrics = pd.DataFrame(results, index=idx_u, columns=['N_RR', 'RRm', 'rr_Cover', 'rr_sd', 'rr_outliers', 'qrs_snr', 'qrs_amp', 'rmssd'])
     df_snr = df_snr.join(df_metrics, how='left')
     df_qc = df_qc.join(df_snr, how='left')
-    df_qc['RRm'] = df_qc['RRm'] / fs * 1000 
-    df_qc['rr_sd'] = df_qc['rr_sd'] / fs * 1000 
-    df_qc['rmssd'] = df_qc['rmssd'] / fs * 1000 
+    df_qc['RRm'] = df_qc['RRm'] / fs * 1000
+    df_qc['rr_sd'] = df_qc['rr_sd'] / fs * 1000
+    df_qc['rmssd'] = df_qc['rmssd'] / fs * 1000
     # Summarise QC
-    c1 = (df_qc['rr_outliers'] <= N_RR_outliers_max)
-    c2 = (df_qc['rr_Cover'] >= RRCOVER_LIM)
-    c3 = (df_qc['N_beats'] >= NBEATS_LIM)
+    c1 = (df_qc['rr_outliers'] <= cfg.max_rr_outliers)
+    c2 = (df_qc['rr_Cover'] >= cfg.rr_cover_min)
+    c3 = (df_qc['N_beats'] >= cfg.n_beats_min)
     # Fill any NaN values with False. This is the crucial fix.
     # Segments that didn't have enough beats to calculate these metrics will now correctly fail.
     c1.fillna(False, inplace=True)
@@ -130,7 +122,34 @@ def procECG(f, i, chunk_samples, fname, signal_label='ECG', fs=250):
     return df_qc
 
 
-def calculate_summary_metrics(df_qc, sleep_thrs):
+def _is_within_rest_window(index, cfg):
+    """Boolean mask selecting timestamps inside the configured rest window.
+
+    Handles windows that wrap past midnight (the usual case, e.g. 21:00-09:00)
+    as well as same-day windows, so a shifted schedule can be configured
+    without code changes.
+
+    NOTE: this is a fixed clock window, not a per-participant estimate. Someone
+    who habitually sleeps outside it has their resting HR and HRV computed from
+    the wrong hours. Detecting the main rest period from accelerometer data
+    directly would remove that assumption.
+    """
+    hours = index.hour
+    if cfg.night_start_hour > cfg.night_end_hour:
+        # Wraps past midnight: late evening OR early morning.
+        return (hours >= cfg.night_start_hour) | (hours < cfg.night_end_hour)
+    # Does not wrap: a single contiguous block within one day.
+    return (hours >= cfg.night_start_hour) & (hours < cfg.night_end_hour)
+
+
+def _rest_periods(df_10min, cfg):
+    """10-minute windows that are both inside the rest window and low-movement."""
+    in_window = _is_within_rest_window(df_10min.index, cfg)
+    low_movement = df_10min['acc_imputed'] < cfg.sleep_threshold_mg
+    return df_10min[in_window & low_movement].copy()
+
+
+def calculate_summary_metrics(df_qc, cfg):
     """
     Resamples data to 10-minute windows and calculates robust summary metrics.
     """
@@ -142,7 +161,7 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
 
     # 2. Calculate the 10-minute average heart rate (just translate RR to HR)
     df_10min['HR_10min'] = 60 * 1000 / df_10min['RRm_imputed']
-    
+
     # 3. Pick the 10-min segments with min, max, and mean avg HR
     summary = {
         'HR_min': df_10min['HR_10min'].min(),
@@ -150,16 +169,10 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
         'HR_mean': df_10min['HR_10min'].mean()
     }
 
-    # 4. Isolate resting (sleep) periods using the low acceleration threshold
-    # Create a boolean mask for times between 9 PM and 9 AM.
-    # The '|' (OR) is used to combine the late evening hours with the early morning hours.
-    # TODO WARNING: This simple hardcoded time window may not be suitable for all populations!
-    # TODO IN THE FUTURE FIGURE OUT A WAY TO ACCOUNT FOR SHIFT WORKERS ETC. 
-    is_night_time = (df_10min.index.hour >= 21) | (df_10min.index.hour < 9)
-    
-    # Combine the time filter with the existing low-movement filter
-    sleep_periods = df_10min[is_night_time & (df_10min['acc_imputed'] < sleep_thrs)].copy()
-    print(f"Found {len(sleep_periods)} sleep periods (10-min segments with acc < {sleep_thrs} mg)")
+    # 4. Isolate resting periods: inside the rest window and barely moving
+    sleep_periods = _rest_periods(df_10min, cfg)
+    print(f"Found {len(sleep_periods)} rest periods "
+          f"(10-min segments with acc < {cfg.sleep_threshold_mg} mg)")
 
     if not sleep_periods.empty:
         # 5. Calculate Resting HR and Resting HRV from these quiet periods
@@ -169,26 +182,20 @@ def calculate_summary_metrics(df_qc, sleep_thrs):
         # Provide fallback values if no resting periods are found
         summary['HR_rest_robust'] = np.nan
         summary['median_daily_rmssd'] = np.nan
-        
+
     return summary
 
 
-def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
+def calculate_daily_hrv_for_report(df_qc, cfg):
     """Calculates the daily median RMSSD from 10-minute sleep periods for the report table."""
     if df_qc.empty: return None
-    
+
     df_10min = df_qc.resample('10min', on='time').mean()
-    # Create a boolean mask for times between 9 PM and 9 AM.
-    # The '|' (OR) is used to combine the late evening hours with the early morning hours.
-    # TODO WARNING: This simple hardcoded time window may not be suitable for all populations!
-    # TODO IN THE FUTURE FIGURE OUT A WAY TO ACCOUNT FOR SHIFT WORKERS ETC. 
-    is_night_time = (df_10min.index.hour >= 21) | (df_10min.index.hour < 9)
-    
-    # Combine the time filter with the existing low-movement filter
-    sleep_periods = df_10min[is_night_time & (df_10min['acc_imputed'] < sleep_thrs)].copy()
-    
+    sleep_periods = _rest_periods(df_10min, cfg)
+
     if sleep_periods.empty:
-        print("No sleep periods found within the 21:00 - 09:00 time window.")
+        print(f"No rest periods found within the "
+              f"{cfg.night_start_hour:02d}:00 - {cfg.night_end_hour:02d}:00 window.")
         return None
 
     sleep_periods['date'] = sleep_periods.index.date
@@ -209,13 +216,13 @@ def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
 
 
 # Main Processing Function
-def procEDF(edf_file, m_qrs):
+def procEDF(edf_file, cfg, model, model_info=None):
     """Main processing pipeline for a single EDF file."""
     Ts = [['start', time.time()]]
     base_filename = os.path.basename(edf_file)
     output_dirname = os.path.splitext(base_filename)[0]
-    
-    subject_output_path = os.path.join("./output/", output_dirname)
+
+    subject_output_path = os.path.join(str(cfg.output_dir), output_dirname)
     plots_path = os.path.join(subject_output_path, "plots")
     data_path = os.path.join(subject_output_path, "processed_data")
 
@@ -229,27 +236,41 @@ def procEDF(edf_file, m_qrs):
         dat_info['failed'] = 1
         return dat_info
 
+    # The QRS detector was trained at a fixed sample rate, and several helpers
+    # assume it too. Processing at a different rate would produce plausible
+    # but wrong beat timings, so make the mismatch impossible to miss.
+    if int(fs) != int(cfg.fs_expected):
+        print(f"WARNING: {base_filename} is sampled at {fs} Hz but the QRS "
+              f"detector expects {cfg.fs_expected} Hz. Results for this file "
+              f"are unlikely to be valid.")
+
+    # Record which model produced these results, for provenance.
+    if model_info:
+        for key, value in model_info.items():
+            dat_info[key] = value
+
     dat_info['failed'] = 0
-    chunk_samples = int(fs * Nchunk)
+    chunk_samples = int(fs * cfg.chunk_seconds)
     n_chunks = int(np.ceil(dat_info['N_ecg'].iloc[0] / chunk_samples))
 
     try:
         with pyedflib.EdfReader(edf_file) as f:
-            df_qc_list = [procECG(f, i, chunk_samples, base_filename) for i in range(n_chunks)]
-        
+            df_qc_list = [procECG(f, i, chunk_samples, base_filename, cfg, model)
+                          for i in range(n_chunks)]
+
         df_qc = pd.concat(
-            [df.dropna(axis=1, how='all') for df in df_qc_list if df is not None and not df.empty], 
+            [df.dropna(axis=1, how='all') for df in df_qc_list if df is not None and not df.empty],
             ignore_index=True
         )
 
         if df_qc.empty:
             raise ValueError("No valid ECG chunks found after processing.")
 
-        df_qc.index = df_qc.index * int(NSEG / fs)
+        df_qc.index = df_qc.index * cfg.segment_seconds
         df_qc['time'] = pd.to_datetime(start_time) + pd.to_timedelta(df_qc.index, unit='s')
-        
+
         mean_qc = df_qc.loc[df_qc['device_worn'], 'passed_finalQC'].mean()
-        if mean_qc < 0.75:
+        if mean_qc < cfg.qc_warn_below:
             print(f"Warning: Low data quality. Only {mean_qc:.1%} of ECG passed final QC.")
             df_f = df_qc[(~df_qc['passed_finalQC']) & (df_qc['device_worn'])].sample(n=min(25, len(df_qc)))
             with pyedflib.EdfReader(edf_file) as f:
@@ -267,25 +288,27 @@ def procEDF(edf_file, m_qrs):
         df_qc = doImp(df_qc, 'acc')
         
         # Calculate all summary metrics using the new 10-minute window method
-        summary_metrics = calculate_summary_metrics(df_qc, SLEEP_THRS)
-        
+        summary_metrics = calculate_summary_metrics(df_qc, cfg)
+
         # Update the main dat_info DataFrame with these new, robust values
         for key, value in summary_metrics.items():
             dat_info[key] = value
 
          # Calculate the daily HRV summary specifically for the report table
-        daily_hrv_summary_for_report = calculate_daily_hrv_for_report(df_qc, SLEEP_THRS)
+        daily_hrv_summary_for_report = calculate_daily_hrv_for_report(df_qc, cfg)
 
         # Final HR column for plotting
         df_qc['HRm_imputed'] = 60 * 1000 / df_qc['RRm_imputed']
-        
+
         # Time in activity zones (Etzkorn et al. 2024 chest-worn MAD thresholds)
+        thresholds = cfg.activity_thresholds
+        hours_per_segment = cfg.segment_seconds / 3600
         acc_series = df_qc.loc[df_qc['device_worn'], 'acc_imputed']
-        dat_info['hours_sleep_sedentary'] = (acc_series < ACTIVITY_THRESHOLDS['very_light']).sum() * 10 / 3600
-        dat_info['hours_very_light']      = ((acc_series >= ACTIVITY_THRESHOLDS['very_light']) & (acc_series < ACTIVITY_THRESHOLDS['light'])).sum() * 10 / 3600
-        dat_info['hours_light_activity']  = ((acc_series >= ACTIVITY_THRESHOLDS['light'])      & (acc_series < ACTIVITY_THRESHOLDS['moderate'])).sum() * 10 / 3600
-        dat_info['hours_mvpa']            = (acc_series >= ACTIVITY_THRESHOLDS['moderate']).sum() * 10 / 3600
-        
+        dat_info['hours_sleep_sedentary'] = (acc_series < thresholds['very_light']).sum() * hours_per_segment
+        dat_info['hours_very_light']      = ((acc_series >= thresholds['very_light']) & (acc_series < thresholds['light'])).sum() * hours_per_segment
+        dat_info['hours_light_activity']  = ((acc_series >= thresholds['light'])      & (acc_series < thresholds['moderate'])).sum() * hours_per_segment
+        dat_info['hours_mvpa']            = (acc_series >= thresholds['moderate']).sum() * hours_per_segment
+
         # Final wrap-up stats
         dat_info['wear_time_ECG_10s'] = df_qc["device_worn"].mean()
         dat_info['prop_ECG_passed_finalQC'] = df_qc['passed_finalQC'].mean()
@@ -317,8 +340,8 @@ def procEDF(edf_file, m_qrs):
         num_days = df_qc['time'].dt.date.nunique()
         pie_chart_path = plot_activity_pie_chart(dat_info, save_path=os.path.join(plots_path, base_filename + "_activity_pie.png"))
         hr_dist_path = plot_hr_distribution(df_qc, save_path=os.path.join(plots_path, base_filename + "_hr_distribution.png"))
-        daily_bars_path = plot_daily_activity_bars(df_qc.copy(), ACTIVITY_THRESHOLDS, save_path=os.path.join(plots_path, base_filename + "_daily_bars.png"))
-        create_pdf_report(dat_info, subject_output_path, edf_file, ACTIVITY_THRESHOLDS, num_days, daily_bars_path, profile_plot_path, daily_hrv_summary_for_report, pie_chart_path, hr_dist_path)
+        daily_bars_path = plot_daily_activity_bars(df_qc.copy(), thresholds, save_path=os.path.join(plots_path, base_filename + "_daily_bars.png"))
+        create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_days, daily_bars_path, profile_plot_path, daily_hrv_summary_for_report, pie_chart_path, hr_dist_path)
 
         Ts.append(['create_report', time.time()])
         df_time = pd.DataFrame(Ts, columns=['task', 't'])
@@ -334,14 +357,15 @@ def procEDF(edf_file, m_qrs):
 
 
 def procEDF_wrapper(edf_filename):
-    """A simple wrapper for use with multiprocessing.Pool."""
-    return procEDF(edf_filename, m_qrs)
+    """Entry point for multiprocessing.Pool.
 
-
-if __name__ == "__main__":
-    # This block is for DNAnexus execution and can be ignored for local runs
-    import dxpy
-    @dxpy.entry_point('main')
-    def main(input_names, i_job):
-        pass
-    dxpy.run()
+    Reads the model and settings from the per-worker globals populated by
+    init_worker(), because a loaded Keras model cannot be pickled and sent to
+    a worker as an argument.
+    """
+    if m_qrs is None or _CONFIG is None:
+        raise RuntimeError(
+            "Worker was not initialised. multiprocessing.Pool must be created "
+            "with initializer=init_worker and initargs=(config,)."
+        )
+    return procEDF(edf_filename, _CONFIG, m_qrs, _MODEL_INFO)
