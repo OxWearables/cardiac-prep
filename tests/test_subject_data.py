@@ -83,7 +83,7 @@ def test_unknown_subject_lists_the_available_ones(tmp_path):
 
 
 def test_empty_output_directory_suggests_running_the_pipeline(tmp_path):
-    with pytest.raises(SubjectNotFoundError, match="run_local.py"):
+    with pytest.raises(SubjectNotFoundError, match="process.py"):
         load_subject_qc(tmp_path, "anything")
 
 

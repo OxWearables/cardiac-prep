@@ -6,9 +6,6 @@ Plot one participant's results, from a clone of this repository.
     python plot_subject.py --subject 001_recording
     python plot_subject.py --help
 
-Replaces the older quick_plot.py and visualise_results.py, which each needed a
-participant id edited into the source.
-
 If you have installed the package (pip install .), the 'edfproc-plot' command
 does exactly the same thing from any folder.
 """

@@ -13,7 +13,7 @@ Once set up, this is the whole pipeline. Run them in this order:
 ### 1. Process your recordings
 
 ```
-python run_local.py
+python process.py
 ```
 
 Reads every `.edf` file in `input_data` and writes results to `output`. About 30 seconds per file.
@@ -21,7 +21,7 @@ Reads every `.edf` file in `input_data` and writes results to `output`. About 30
 ### 2. Summarise the whole dataset
 
 ```
-python generate_dataset_summary.py
+python summarise_dataset.py
 ```
 
 Creates population-level plots across all participants.
@@ -141,7 +141,7 @@ The pipeline uses a machine-learning model to find heartbeats. This file is **no
 ### Step 5 – Check it works
 
 ```
-python run_local.py --help
+python process.py --help
 ```
 
 If you see a list of options, setup is complete. 🎉
@@ -155,13 +155,13 @@ Put your `.edf` files into the `input_data` folder, then use [the three commands
 To preview what will be processed without processing anything:
 
 ```
-python run_local.py --dry-run
+python process.py --dry-run
 ```
 
 To use folders elsewhere on your computer:
 
 ```
-python run_local.py --input /path/to/my/edfs --output /path/to/my/results
+python process.py --input /path/to/my/edfs --output /path/to/my/results
 ```
 
 ---

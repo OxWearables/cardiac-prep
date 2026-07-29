@@ -123,7 +123,7 @@ def test_summary_generates_both_plots(tmp_path):
 
 def test_summary_without_a_summary_file_exits_nonzero(tmp_path, capsys):
     assert dataset_summary.main(["--output", str(tmp_path / "empty")]) == 1
-    assert "run_local.py" in capsys.readouterr().err
+    assert "process.py" in capsys.readouterr().err
 
 
 def test_summary_rejects_a_file_from_an_older_pipeline(tmp_path, capsys):

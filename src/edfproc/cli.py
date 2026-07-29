@@ -1,7 +1,7 @@
 """Command line interface for the preprocessing pipeline.
 
 Reachable either as the installed ``edfproc`` command or by running
-``python run_local.py`` from a clone of the repository.
+``python process.py`` from a clone of the repository.
 """
 
 import argparse
@@ -24,18 +24,19 @@ log = get_logger("cli")
 
 
 def parse_args(argv=None):
+    # prog is left unset so the help text names the command the user actually
+    # typed: "process.py" from a clone, "edfproc" once installed.
     parser = argparse.ArgumentParser(
-        prog="edfproc",
         description=(
             "Process wearable ECG and accelerometer recordings from EDF files. "
             "Settings come from config.yaml; the options below override it."
         ),
         epilog=(
             "Examples:\n"
-            "  edfproc\n"
-            "  edfproc --input ~/my_edfs --output ~/results\n"
-            "  edfproc --jobs 1        (one at a time, clearer errors)\n"
-            "  edfproc --dry-run       (list what would be processed)\n"
+            "  %(prog)s\n"
+            "  %(prog)s --input ~/my_edfs --output ~/results\n"
+            "  %(prog)s --jobs 1        (one at a time, clearer errors)\n"
+            "  %(prog)s --dry-run       (list what would be processed)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

@@ -103,16 +103,16 @@ def plot_dataset_histograms(df, save_path):
 
 
 def parse_args(argv=None):
+    # prog is left unset so the help text names the command the user typed.
     parser = argparse.ArgumentParser(
-        prog="edfproc-summary",
         description=(
             "Generate dataset-level summary plots from the aggregated results "
             "written by the pipeline."
         ),
         epilog=(
             "Examples:\n"
-            "  edfproc-summary\n"
-            "  edfproc-summary --output /path/to/results\n"
+            "  %(prog)s\n"
+            "  %(prog)s --output /path/to/results\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -150,7 +150,7 @@ def main(argv=None):
     if not summary_path.is_file():
         print(
             f"\nSummary file not found: '{summary_path}'\n"
-            "Process your recordings first:  python run_local.py\n",
+            "Process your recordings first:  python process.py\n",
             file=sys.stderr,
         )
         return 1

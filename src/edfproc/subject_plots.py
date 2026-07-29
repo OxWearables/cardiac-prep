@@ -125,14 +125,14 @@ def plot_heatmaps(df_qc, subject_id):
 
 
 def parse_args(argv=None):
+    # prog is left unset so the help text names the command the user typed.
     parser = argparse.ArgumentParser(
-        prog="edfproc-plot",
         description="Plot one participant's processed results.",
         epilog=(
             "Examples:\n"
-            "  edfproc-plot --list\n"
-            "  edfproc-plot --subject 001_recording\n"
-            "  edfproc-plot --subject 001_recording --kind heatmap --show\n"
+            "  %(prog)s --list\n"
+            "  %(prog)s --subject 001_recording\n"
+            "  %(prog)s --subject 001_recording --kind heatmap --show\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -189,7 +189,7 @@ def main(argv=None):
         if not subjects:
             print(
                 f"No processed participants found in '{config.output_dir}'.\n"
-                "Run the pipeline first:  python run_local.py",
+                "Run the pipeline first:  python process.py",
                 file=sys.stderr,
             )
             return 1

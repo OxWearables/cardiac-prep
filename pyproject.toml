@@ -81,6 +81,6 @@ select = ["E9", "F", "I"]
 
 [tool.ruff.lint.per-file-ignores]
 # Path setup must precede the package import in the no-install entry points.
-"run_local.py" = ["E402"]
+"process.py" = ["E402"]
 "plot_subject.py" = ["E402"]
-"generate_dataset_summary.py" = ["E402"]
+"summarise_dataset.py" = ["E402"]

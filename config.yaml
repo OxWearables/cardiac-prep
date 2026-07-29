@@ -14,7 +14,7 @@
 #   - Use  ~  to mean "not set".
 #
 # Anything on the command line overrides this file, for example:
-#   python run_local.py --input /path/to/my/edfs --output /path/to/results
+#   python process.py --input /path/to/my/edfs --output /path/to/results
 # -----------------------------------------------------------------------------
 
 

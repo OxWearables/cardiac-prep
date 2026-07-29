@@ -2,8 +2,8 @@
 """
 Generate dataset-level summary plots, from a clone of this repository.
 
-    python generate_dataset_summary.py
-    python generate_dataset_summary.py --help
+    python summarise_dataset.py
+    python summarise_dataset.py --help
 
 If you have installed the package (pip install .), the 'edfproc-summary'
 command does exactly the same thing from any folder.

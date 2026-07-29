@@ -47,7 +47,7 @@ def _describe_available(output_dir):
     if not subjects:
         return (
             f"No processed participants found in '{output_dir}'.\n"
-            "Run the pipeline first:  python run_local.py"
+            "Run the pipeline first:  python process.py"
         )
     listing = "\n  ".join(subjects)
     return f"Available participants in '{output_dir}':\n  {listing}"

@@ -2,9 +2,9 @@
 """
 Run the pipeline from a clone of this repository, without installing anything.
 
-    python run_local.py
-    python run_local.py --input /path/to/edfs --output /path/to/results
-    python run_local.py --help
+    python process.py
+    python process.py --input /path/to/edfs --output /path/to/results
+    python process.py --help
 
 If you have installed the package (pip install .), the 'edfproc' command does
 exactly the same thing from any folder.
