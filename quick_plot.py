@@ -7,10 +7,11 @@ It is intended for ad-hoc analysis and debugging.
 """
 __author__ = "Anna Bator"
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
 import glob
+import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # TODO CHANGE THIS to the base name of the subject you want to plot (e.g., "subject_01")
 subject_id = ""

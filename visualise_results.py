@@ -1,11 +1,11 @@
 __author__ = "Anna Bator"
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import os
 import glob
+import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 # TODO CHANGE THIS to the base name of the subject you want to plot 
 subject_id = "xx" 
