@@ -18,5 +18,11 @@ input_data/*
 !input_data/README.md
 # Ignore all contents of the output folder (no readme in there)
 output/*
+
+# Model weights are distributed separately, not via GitHub.
+# Download them and place them in models/ - see README.
+models/*
+!models/README.md
+
 *.zip
 *.tar.gz
