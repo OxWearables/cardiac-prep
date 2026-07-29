@@ -185,9 +185,6 @@ def calculate_daily_hrv_for_report(df_qc, sleep_thrs):
     is_night_time = (df_10min.index.hour >= 21) | (df_10min.index.hour < 9)
     
     # Combine the time filter with the existing low-movement filter
-    # Except participant REDACTED_ID - they might be a night shift worker
-    if "REDACTED_ID" in df_qc.get('subject_id', pd.Series()).unique(): 
-        is_night_time = True # ignore time filter for this participant
     sleep_periods = df_10min[is_night_time & (df_10min['acc_imputed'] < sleep_thrs)].copy()
     
     if sleep_periods.empty:
