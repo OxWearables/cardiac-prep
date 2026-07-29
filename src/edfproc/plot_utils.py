@@ -9,17 +9,21 @@ __author__ = "Anna Bator"
 __credits__ = "Stefan van Duijvenboden"
 
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
-from reportlab.platypus import Table, TableStyle, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
-import matplotlib.dates as mdates
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Paragraph, Table, TableStyle
+
+from .logging_utils import get_logger
+
+log = get_logger("plot")
 
 # A centralised, cohesive colour palette for all plots
 PRIMARY_BLUE = '#31748F'      # Slate Blue for HR plots
@@ -259,9 +263,8 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
 
         dates = [d.strftime('%b %d') for d in daily_hrv_summary.index]
         num_nights = len(dates) - 1
-        headers = [''] + [f"Night {i+1}" for i in range(num_nights)]
-        # Correctly create date pairs for n-1 nights, with "Jul 10/11" format
-        date_row = ['Date'] + [f"{dates[i]}/{dates[i+1].split()[-1]}" for i in range(num_nights)]
+        # Headers and date rows are built per chunk in the loop below, so the
+        # table can be split across several rows without running off the page.
         # Extract ALL formatted values first
         formatted_values = daily_hrv_summary.apply(
             lambda row: f"{row['rmssd']:.1f} ({row['norm_hrv']:.2f})" if pd.notna(row['rmssd']) else "No Data", 
@@ -304,4 +307,4 @@ def create_pdf_report(dat_info, subject_output_path, edf_file, thresholds, num_d
 
 
     c.save()
-    print(f"Generated PDF report, saved to: {pdf_path}")
+    log.info("PDF report written: %s", pdf_path)

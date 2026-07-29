@@ -6,7 +6,7 @@ failure modes here matter as much as the happy path.
 
 import pytest
 
-from config import Config, ConfigError, load_config
+from edfproc.config import Config, ConfigError, load_config
 
 
 def _write(tmp_path, text, name="config.yaml"):

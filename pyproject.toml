@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edfproc"
+version = "1.0.0"
+description = "ECG and accelerometry (EDF) preprocessing pipeline for multi-day wearable recordings"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9,<3.13"
+authors = [
+    { name = "Anna Bator" },
+    { name = "Stefan van Duijvenboden" },
+]
+keywords = ["ecg", "hrv", "accelerometry", "wearables", "edf", "physical-activity"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+# Direct dependencies only, with permissive bounds. requirements.txt remains a
+# full lockfile of one known-good environment; these are what the code imports.
+dependencies = [
+    "actipy>=3.8",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "pyEDFlib>=0.1.40",
+    "PyYAML>=6.0",
+    "reportlab>=4.0",
+    "scikit-learn>=1.3",
+    "scipy>=1.10",
+    "seaborn>=0.13",
+    "tensorflow>=2.16",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/OxWearables/preprocessing-edf"
+Repository = "https://github.com/OxWearables/preprocessing-edf"
+
+[project.scripts]
+edfproc = "edfproc.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Deliberately narrow: real errors (E9), undefined names and unused imports
+# (F), and unsorted imports (I). Stylistic rules are left off so the linter
+# never argues with the existing scientific-code conventions.
+select = ["E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Path setup must precede the package import in the no-install entry point.
+"run_local.py" = ["E402"]

@@ -8,12 +8,26 @@ and creates two summary plots:
 """
 __author__ = "Anna Bator"
 
+import os
+import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-import os
-from plot_utils import SEDENTARY, LIGHT_GREEN, MODERATE_YELLOW, VIGOROUS_RED, NEUTRAL_GRAY
 from matplotlib.ticker import MaxNLocator
+
+# Make the package importable straight from the source tree, so this script
+# works in a fresh clone with no install step (same approach as run_local.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from edfproc.plot_utils import (  # noqa: E402  (import must follow the path setup)
+    LIGHT_GREEN,
+    MODERATE_YELLOW,
+    NEUTRAL_GRAY,
+    SEDENTARY,
+    VIGOROUS_RED,
+)
 
 SUMMARY_FILE_PATH = "./output/df_info_summary.csv.gz"
 OUTPUT_HIST_PATH = "./output/dataset_summary_histograms.png"

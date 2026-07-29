@@ -8,7 +8,7 @@ All fixtures are synthetic - no participant data is involved.
 import numpy as np
 import pytest
 
-from read_utils import prepSig
+from edfproc.read_utils import prepSig
 
 FS = 250
 NSEG = 2500  # 10 seconds at 250 Hz

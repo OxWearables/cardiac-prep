@@ -6,6 +6,13 @@ venv/
 __pycache__/
 *.pyc
 
+# Build and packaging artefacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
 # IDE and OS-specific files
 .vscode/
 .idea/

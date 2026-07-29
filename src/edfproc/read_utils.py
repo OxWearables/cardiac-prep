@@ -1,16 +1,21 @@
-from datetime import datetime, timedelta
-import pyedflib
+import os
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from scipy.signal import butter, filtfilt, iirnotch
-from scipy.ndimage import median_filter
+import pyedflib
 from actipy.processing import calibrate_gravity
-import os
+from scipy.ndimage import median_filter
+from scipy.signal import butter, filtfilt, iirnotch
+
+from .logging_utils import get_logger
+
+log = get_logger("read")
 
 
 
 def readEDFECG_info(edfFile, signal_label='ECG'):
-    print('--> read EDF from ' + edfFile + '...')   
+    log.info("Reading EDF: %s", os.path.basename(edfFile))
     f = pyedflib.EdfReader(edfFile)
 
     iECG = f.getSignalLabels().index(signal_label)
@@ -18,9 +23,10 @@ def readEDFECG_info(edfFile, signal_label='ECG'):
 
     L = f.getNSamples()[iECG]
 
-    print("Data length: samples/hours/days {}/{}/{}".format(L,np.round(L/fs/3600,1),np.round(L/fs/3600/24,1)))
-    print('Fs: {}Hz'.format(fs))
-    print('Units: ' + units)
+    log.debug("Length: %s samples / %s hours / %s days",
+              L, np.round(L / fs / 3600, 1), np.round(L / fs / 3600 / 24, 1))
+    log.debug("Sample rate: %s Hz", fs)
+    log.debug("Units: %s", units)
     
     # year, month, day, hour, minute, second, microsecond,
     start_time = datetime(
@@ -33,7 +39,7 @@ def readEDFECG_info(edfFile, signal_label='ECG'):
         microsecond = f.starttime_subsecond)
     
     f._close()
-    print('--> finished')   
+    log.debug("Finished reading header")
 
     # Tlim = Tlim*24*3600*fs
     # ecg = ecg[:Tlim]
@@ -49,7 +55,7 @@ def readEDFECG_info(edfFile, signal_label='ECG'):
     return fs, start_time, dat_info
 
 def readACC(edfFile, tstamp, clip_val=4000,T=10, do_cal=True, calib_cube=0.2, cal_stdtol=0.015, cal_win='10s',m_filt_size=120):
-    print("--> read accelerometer data ...")
+    log.debug("Reading accelerometer data")
     f = pyedflib.EdfReader(edfFile)
     
     colnames = f.getSignalLabels()
@@ -94,8 +100,7 @@ def readACC(edfFile, tstamp, clip_val=4000,T=10, do_cal=True, calib_cube=0.2, ca
         dat = 1000 * (np.linalg.norm(dat,axis=-1) - 1)
         
     else:
-        info = []
-        dat = np.linalg.norm(dat,axis=0) - 1000  
+        dat = np.linalg.norm(dat,axis=0) - 1000
 
 
     # do median filter to get these step functions out

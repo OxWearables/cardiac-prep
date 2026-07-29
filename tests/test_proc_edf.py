@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from config import Config
-from proc_edf import _is_within_rest_window, calculate_summary_metrics, compute_mad
+from edfproc.config import Config
+from edfproc.proc_edf import _is_within_rest_window, calculate_summary_metrics, compute_mad
 
 CFG = Config()
 

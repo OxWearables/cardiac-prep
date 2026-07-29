@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proc_utils import doImp, downsampleECG, getQCmetrics, getQRS, getSNR
-
+from edfproc.proc_utils import doImp, downsampleECG, getQCmetrics, getQRS, getSNR
 
 # getSNR
 

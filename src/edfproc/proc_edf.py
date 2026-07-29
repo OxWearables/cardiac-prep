@@ -11,19 +11,29 @@ __author__ = "Anna Bator"
 __credits__ = "Stefan van Duijvenboden"
 ## This script is based on the original work by Stefan van Duijvenboden.
 
-import time
 import os
-import pyedflib
+import time
+import traceback
+
 import numpy as np
 import pandas as pd
-import traceback
-from config import Config
-from model_utils import find_model, model_fingerprint
-from read_utils import readEDFECG_info, readACC, prepSig
-from proc_utils import doImp, getQRSmask, getQCmetrics, getQRS, downsampleECG
-from plot_utils import (plotFunc, plotECG_failedQC, create_pdf_report,
-                        plot_hr_distribution, plot_activity_pie_chart,
-                        plot_daily_activity_bars, plot_24hr_profile_for_report)
+import pyedflib
+
+from .logging_utils import configure_logging, get_logger
+from .model_utils import find_model, model_fingerprint
+from .plot_utils import (
+    create_pdf_report,
+    plot_24hr_profile_for_report,
+    plot_activity_pie_chart,
+    plot_daily_activity_bars,
+    plot_hr_distribution,
+    plotECG_failedQC,
+    plotFunc,
+)
+from .proc_utils import doImp, downsampleECG, getQCmetrics, getQRS, getQRSmask
+from .read_utils import prepSig, readACC, readEDFECG_info
+
+log = get_logger("proc")
 
 # Per-worker state. Populated by init_worker() in each pool process; on macOS
 # and Windows the pool uses 'spawn', so nothing set in the parent is inherited.
@@ -32,15 +42,18 @@ _CONFIG = None
 _MODEL_INFO = None
 
 
-def init_worker(config):
+def init_worker(config, verbose=False):
     """Load the QRS model once per worker process.
 
     Loading in the initialiser rather than per file means the model is read
-    from disk once per core instead of once per recording.
+    from disk once per core instead of once per recording. Logging is
+    reconfigured here because a spawned worker inherits no handlers.
     """
     global m_qrs, _CONFIG, _MODEL_INFO
     import tensorflow as tf
     from tensorflow.keras.models import load_model
+
+    configure_logging(verbose=verbose, include_process=True)
 
     # One TensorFlow thread per worker: the pool already provides parallelism,
     # and letting TF spawn its own threads on top oversubscribes the CPU.
@@ -51,6 +64,7 @@ def init_worker(config):
     model_path = find_model(config.model_dir, config.model_path)
     _MODEL_INFO = model_fingerprint(model_path)
     m_qrs = load_model(str(model_path))
+    log.debug("Worker ready, model %s loaded", model_path.name)
 
 
 def compute_mad(ax, ay, az, epoch_samples):
@@ -118,7 +132,7 @@ def procECG(f, i, chunk_samples, fname, cfg, model, signal_label='ECG', fs=250):
 
     df_qc['passed_finalQC'] = (c1 & c2 & c3 & df_qc['passed_initialQC'])
     df_qc.loc[~df_qc['passed_finalQC'], 'RRm'] = np.nan
-    print(f"--> processed day: {i+1} for {fname}")
+    log.info("Processed day %d for %s", i + 1, fname)
     return df_qc
 
 
@@ -171,8 +185,8 @@ def calculate_summary_metrics(df_qc, cfg):
 
     # 4. Isolate resting periods: inside the rest window and barely moving
     sleep_periods = _rest_periods(df_10min, cfg)
-    print(f"Found {len(sleep_periods)} rest periods "
-          f"(10-min segments with acc < {cfg.sleep_threshold_mg} mg)")
+    log.debug("Found %d rest periods (10-min segments with acc < %s mg)",
+              len(sleep_periods), cfg.sleep_threshold_mg)
 
     if not sleep_periods.empty:
         # 5. Calculate Resting HR and Resting HRV from these quiet periods
@@ -194,8 +208,8 @@ def calculate_daily_hrv_for_report(df_qc, cfg):
     sleep_periods = _rest_periods(df_10min, cfg)
 
     if sleep_periods.empty:
-        print(f"No rest periods found within the "
-              f"{cfg.night_start_hour:02d}:00 - {cfg.night_end_hour:02d}:00 window.")
+        log.warning("No rest periods found within the %02d:00-%02d:00 window.",
+                    cfg.night_start_hour, cfg.night_end_hour)
         return None
 
     sleep_periods['date'] = sleep_periods.index.date
@@ -209,7 +223,7 @@ def calculate_daily_hrv_for_report(df_qc, cfg):
     try:
         daily_hrv_summary['norm_hrv'] = np.log(daily_hrv_summary['rmssd'].replace(0, np.nan))
     except TypeError:
-        print("Warning: Could not calculate normalised HRV (np.log failed). Skipping.")
+        log.warning("Could not calculate normalised HRV (np.log failed). Skipping.")
         daily_hrv_summary['norm_hrv'] = np.nan
         
     return daily_hrv_summary
@@ -232,7 +246,7 @@ def procEDF(edf_file, cfg, model, model_info=None):
     fs, start_time, dat_info = readEDFECG_info(edf_file)
 
     if dat_info.empty or dat_info['N_ecg'].iloc[0] == 0:
-        print(f"Warning: no data in: {edf_file}")
+        log.warning("No data in: %s", edf_file)
         dat_info['failed'] = 1
         return dat_info
 
@@ -240,9 +254,10 @@ def procEDF(edf_file, cfg, model, model_info=None):
     # assume it too. Processing at a different rate would produce plausible
     # but wrong beat timings, so make the mismatch impossible to miss.
     if int(fs) != int(cfg.fs_expected):
-        print(f"WARNING: {base_filename} is sampled at {fs} Hz but the QRS "
-              f"detector expects {cfg.fs_expected} Hz. Results for this file "
-              f"are unlikely to be valid.")
+        log.warning(
+            "%s is sampled at %s Hz but the QRS detector expects %s Hz. "
+            "Results for this file are unlikely to be valid.",
+            base_filename, fs, cfg.fs_expected)
 
     # Record which model produced these results, for provenance.
     if model_info:
@@ -271,7 +286,8 @@ def procEDF(edf_file, cfg, model, model_info=None):
 
         mean_qc = df_qc.loc[df_qc['device_worn'], 'passed_finalQC'].mean()
         if mean_qc < cfg.qc_warn_below:
-            print(f"Warning: Low data quality. Only {mean_qc:.1%} of ECG passed final QC.")
+            log.warning("Low data quality in %s: only %.1f%% of worn ECG passed QC.",
+                        base_filename, mean_qc * 100)
             df_f = df_qc[(~df_qc['passed_finalQC']) & (df_qc['device_worn'])].sample(n=min(25, len(df_qc)))
             with pyedflib.EdfReader(edf_file) as f:
                 plot_save_path = os.path.join(plots_path, base_filename + '_ECGs_failedQC.pdf')
@@ -346,11 +362,11 @@ def procEDF(edf_file, cfg, model, model_info=None):
         Ts.append(['create_report', time.time()])
         df_time = pd.DataFrame(Ts, columns=['task', 't'])
         df_time['dt'] = df_time['t'].diff().fillna(0)
-        print(df_time[['task', 'dt']])
+        log.debug("Timings for %s:\n%s", base_filename, df_time[['task', 'dt']])
 
     except Exception as e:
-        print(f"[ERROR] procEDF failed in {edf_file}: {e}")
-        traceback.print_exc()
+        log.error("Processing failed for %s: %s", edf_file, e)
+        log.debug("Traceback:\n%s", traceback.format_exc())
         dat_info['failed'] = 1
         
     return dat_info
