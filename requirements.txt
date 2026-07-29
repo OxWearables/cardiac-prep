@@ -31,13 +31,13 @@ optree==0.17.0
 packaging==25.0
 pandas==2.3.2
 patsy==1.0.1
-pdf2image==1.17.0
 pillow==11.3.0
 protobuf==6.32.1
 pyEDFlib==0.1.42
 Pygments==2.19.2
 pyparsing==3.2.5
 python-dateutil==2.9.0.post0
+PyYAML==6.0.2
 pytz==2025.2
 reportlab==4.4.4
 requests==2.32.5

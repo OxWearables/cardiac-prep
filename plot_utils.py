@@ -19,7 +19,6 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
-from pdf2image import convert_from_path
 import matplotlib.dates as mdates
 
 # A centralised, cohesive colour palette for all plots
