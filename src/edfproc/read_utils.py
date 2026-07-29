@@ -124,7 +124,12 @@ def prepSig(ecg,nseg=2500,fs=250, clip_val=4,var_range=[0.0001,2], min_ptp=0.025
         ecg = np.pad(ecg, (0, pad_size), mode='edge')
     
     ecg = ecg.reshape(-1,nseg)
-    i_device_worn = np.std(ecg,axis=-1)>0
+    # Non-wear is a perfectly flat trace. Peak-to-peak rather than standard
+    # deviation, because np.std of a constant array can return a value around
+    # 1e-24 from rounding in the mean, whereas max-minus-min of identical
+    # values is exactly zero. With a > 0 test the former reports non-wear as
+    # worn, for some constant values but not others.
+    i_device_worn = np.ptp(ecg, axis=-1) > 0
 
     
     # clip, only accept ECGs with <5% clipped values

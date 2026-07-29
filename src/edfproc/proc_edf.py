@@ -91,11 +91,26 @@ def compute_mad(ax, ay, az, epoch_samples):
 
 
 def procECG(f, i, chunk_samples, fname, cfg, model, signal_label='ECG', fs=250):
-    """Processes a single chunk of ECG data."""
+    """Processes a single chunk of ECG data.
+
+    Returns an empty DataFrame if the chunk starts past the end of the
+    recording, which procEDF filters out before concatenating.
+    """
     nseg = cfg.segment_samples
-    start = i * chunk_samples
     iECG = f.getSignalLabels().index(signal_label)
-    ecg = f.readSignal(iECG, start=start, n=chunk_samples)
+    total_samples = f.getNSamples()[iECG]
+    start = i * chunk_samples
+
+    # Never ask for samples that do not exist. pyedflib returns an EMPTY array
+    # when n exceeds the whole signal length, and silently zero-pads when
+    # reading past the end from a valid start. Unclamped, the first case makes
+    # any recording shorter than one chunk fail outright, and the second
+    # appends phantom non-wear segments that dilute the wear-time metrics.
+    n_samples = int(min(chunk_samples, total_samples - start))
+    if n_samples <= 0:
+        return pd.DataFrame()
+
+    ecg = f.readSignal(iECG, start=start, n=n_samples)
     ecg = ecg / 1000
     ecg, i_device_worn, ix_non_clipped, ix_pre_qc = prepSig(ecg=ecg, fs=fs, nseg=nseg)
     ix_qc = i_device_worn & ix_non_clipped & ix_pre_qc
@@ -143,10 +158,34 @@ def _is_within_rest_window(index, cfg):
     as well as same-day windows, so a shifted schedule can be configured
     without code changes.
 
-    NOTE: this is a fixed clock window, not a per-participant estimate. Someone
-    who habitually sleeps outside it has their resting HR and HRV computed from
-    the wrong hours. Detecting the main rest period from accelerometer data
-    directly would remove that assumption.
+    TODO (future work): replace this fixed clock window with per-participant
+    detection of the main sleep period, following the structure of van Hees'
+    HDCZA algorithm as used in GGIR, but on MAD magnitude rather than limb
+    angle since the device is chest-worn:
+
+      1. Work in noon-to-noon days so a night is never split across dates.
+      2. Take a rolling median of MAD over 30-60 minutes.
+      3. Find contiguous runs below the sedentary cut-point.
+      4. Keep runs >= 30 min; merge runs separated by < 60 min, so brief
+         wakings do not split the window.
+      5. The longest merged run is that night's sleep window.
+      6. Fall back to this clock window if no run >= 3 hours is found, and
+         record which method was used per participant.
+
+    Define the window from movement only, never from heart rate: selecting on
+    low HR and then reporting the HR in that window as resting HR biases the
+    estimate downwards and makes it an artefact of the selection rule. HR is
+    still useful as a check, e.g. flagging a participant whose detected sleep
+    HR is not below their wake HR.
+
+    Add it behind an opt-in config flag so existing results stay unchanged and
+    the two methods can be compared on the same data.
+
+    Known limitation of the current approach: it does not require contiguity,
+    so a quiet ten minutes at 21:00 counts the same as mid-sleep. It also does
+    not exclude non-wear, and acc_imputed / RRm_imputed are filled by
+    time-of-day averaging, so a night the device was removed can be selected
+    as rest using imputed values.
     """
     hours = index.hour
     if cfg.night_start_hour > cfg.night_end_hour:

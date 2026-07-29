@@ -154,7 +154,14 @@ def plot_daily_activity_bars(df, thresholds, save_path):
     labels = ['Sleep/Sedentary', 'Very Light', 'Light', 'Moderate-Vigorous']
     bins = [-np.inf, thresholds['very_light'], thresholds['light'], thresholds['moderate'], np.inf]
     df['activity_zone'] = pd.cut(df['acc_imputed'], bins=bins, labels=labels, right=False)
-    daily_counts = df.groupby([df['time'].dt.date, 'activity_zone']).size().unstack(fill_value=0)
+    # observed=False keeps every activity zone as a column even on days where
+    # one is empty, so the stacked bars stay comparable across days. Stated
+    # explicitly because the pandas default is changing.
+    daily_counts = (
+        df.groupby([df['time'].dt.date, 'activity_zone'], observed=False)
+        .size()
+        .unstack(fill_value=0)
+    )
     daily_hours = daily_counts * 10 / 3600
     daily_hours.index = [d.strftime('%b %d') for d in daily_hours.index]
     fig, ax = plt.subplots(figsize=(10, 6))
