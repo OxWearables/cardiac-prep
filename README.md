@@ -64,4 +64,4 @@ This pipeline uses the natural logarithm of RMSSD to calculate a normalised HRV 
 
 ## Authors
 * **Stefan van Duijvenboden**
-* **Awa Bator**
+* **Anna Bator**

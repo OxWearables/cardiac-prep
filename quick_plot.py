@@ -5,7 +5,7 @@ This script loads the processed time-series, daily, and 24-hour profile data
 for a specified subject and generates several plots for immediate inspection.
 It is intended for ad-hoc analysis and debugging.
 """
-__author__ = "Awa Bator"
+__author__ = "Anna Bator"
 
 import pandas as pd
 import matplotlib.pyplot as plt

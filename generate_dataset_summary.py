@@ -6,7 +6,7 @@ and creates two summary plots:
 1. A grid of histograms showing the distribution of key metrics across all participants.
 2. A scatter plot showing the relationship between resting heart rate and HRV.
 """
-__author__ = "Awa Bator"
+__author__ = "Anna Bator"
 
 import pandas as pd
 import seaborn as sns

@@ -7,7 +7,7 @@ performs quality control, calculates heart rate, HRV, and activity metrics,
 imputes missing data, and generates a comprehensive summary report and plots for
 each participant.
 """
-__author__ = "Awa Bator"
+__author__ = "Anna Bator"
 __credits__ = "Stefan van Duijvenboden"
 ## This script is based on the original work by Stefan van Duijvenboden.
 

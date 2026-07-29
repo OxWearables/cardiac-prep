@@ -5,7 +5,7 @@ This module contains functions to:
 - Generate various plots (time series, histograms, heatmaps, pie charts).
 - Assemble the generated plots and summary data into a final PDF report.
 """
-__author__ = "Awa Bator"
+__author__ = "Anna Bator"
 __credits__ = "Stefan van Duijvenboden"
 
 import os

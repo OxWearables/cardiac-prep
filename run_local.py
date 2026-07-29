@@ -6,7 +6,7 @@ This script discovers all .EDF files in a specified input directory,
 distributes the processing of these files across all available CPU cores
 using multiprocessing, and aggregates the results into a single summary CSV file.
 """
-__author__ = "Awa Bator"
+__author__ = "Anna Bator"
 
 import os
 import glob
