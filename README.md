@@ -267,7 +267,7 @@ Academic Use Licence, see [LICENSE](LICENSE). Free for academic, non-commercial
 research and teaching. Commercial use requires a separate licence - contact
 Oxford University Innovation at enquiries@innovation.ox.ac.uk.
 
-Copyright © 2025-2026, University of Oxford.
+Copyright © 2026, University of Oxford.
 
 ## Authors
 * **Stefan van Duijvenboden**
