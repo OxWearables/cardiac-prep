@@ -268,6 +268,15 @@ def calculate_daily_hrv_for_report(df_qc, cfg):
     return daily_hrv_summary
 
 
+def _failure_row(name, reason):
+    """A one-row summary standing in for a recording that could not be read.
+
+    Keeps the aggregated summary rectangular even when a file fails before any
+    header fields are available.
+    """
+    return pd.DataFrame({'Name': [name], 'failed': [1], 'failure_reason': [reason]})
+
+
 # Main Processing Function
 def procEDF(edf_file, cfg, model, model_info=None):
     """Main processing pipeline for a single EDF file."""
@@ -282,11 +291,20 @@ def procEDF(edf_file, cfg, model, model_info=None):
     os.makedirs(plots_path, exist_ok=True)
     os.makedirs(data_path, exist_ok=True)
 
-    fs, start_time, dat_info = readEDFECG_info(edf_file)
+    # Reading the header is outside the main try block below, so guard it
+    # separately: a corrupt or unreadable file must fail this one recording,
+    # not raise out of the worker and abort the whole batch.
+    try:
+        fs, start_time, dat_info = readEDFECG_info(edf_file)
+    except Exception as exc:
+        log.error("Could not read %s: %s: %s", base_filename, type(exc).__name__, exc)
+        log.debug("Traceback:\n%s", traceback.format_exc())
+        return _failure_row(base_filename, f"unreadable file ({type(exc).__name__}: {exc})")
 
     if dat_info.empty or dat_info['N_ecg'].iloc[0] == 0:
-        log.warning("No data in: %s", edf_file)
+        log.warning("No ECG data in: %s", base_filename)
         dat_info['failed'] = 1
+        dat_info['failure_reason'] = "no ECG samples in file"
         return dat_info
 
     # The QRS detector was trained at a fixed sample rate, and several helpers
@@ -304,6 +322,7 @@ def procEDF(edf_file, cfg, model, model_info=None):
             dat_info[key] = value
 
     dat_info['failed'] = 0
+    dat_info['failure_reason'] = ""
     chunk_samples = int(fs * cfg.chunk_seconds)
     n_chunks = int(np.ceil(dat_info['N_ecg'].iloc[0] / chunk_samples))
 
@@ -320,6 +339,24 @@ def procEDF(edf_file, cfg, model, model_info=None):
         if df_qc.empty:
             raise ValueError("No valid ECG chunks found after processing.")
 
+        # RRm is set to NaN wherever a segment fails final QC, and the concat
+        # above drops columns that are all-NaN within a chunk. So if no segment
+        # anywhere passed, the column is gone entirely and the imputation below
+        # would die with a bare KeyError. Explain the situation instead.
+        if 'RRm' not in df_qc.columns:
+            n_segments = len(df_qc)
+            n_worn = int(df_qc['device_worn'].sum())
+            n_initial = int(df_qc['passed_initialQC'].sum())
+            raise ValueError(
+                f"no usable heartbeats: of {n_segments} 10-second segments, "
+                f"{n_worn} had the device worn and {n_initial} passed initial "
+                f"signal checks, but none passed final quality control "
+                f"(needs >= {cfg.n_beats_min} beats, R-R coverage "
+                f">= {cfg.rr_cover_min:.0%}, <= {cfg.max_rr_outliers} outliers). "
+                f"There are no R-R intervals to summarise. See the "
+                f"_ECGs_failedQC.pdf plot in the plots folder for example traces."
+            )
+
         df_qc.index = df_qc.index * cfg.segment_seconds
         df_qc['time'] = pd.to_datetime(start_time) + pd.to_timedelta(df_qc.index, unit='s')
 
@@ -327,10 +364,15 @@ def procEDF(edf_file, cfg, model, model_info=None):
         if mean_qc < cfg.qc_warn_below:
             log.warning("Low data quality in %s: only %.1f%% of worn ECG passed QC.",
                         base_filename, mean_qc * 100)
-            df_f = df_qc[(~df_qc['passed_finalQC']) & (df_qc['device_worn'])].sample(n=min(25, len(df_qc)))
-            with pyedflib.EdfReader(edf_file) as f:
-                plot_save_path = os.path.join(plots_path, base_filename + '_ECGs_failedQC.pdf')
-                plotECG_failedQC(f, df_f, plot_save_path)
+            # Sample size must be bounded by the FILTERED subset, not the whole
+            # frame: with fewer than 25 worn-but-failing segments, pandas raises
+            # "Cannot take a larger sample than population".
+            failing_worn = df_qc[(~df_qc['passed_finalQC']) & (df_qc['device_worn'])]
+            if not failing_worn.empty:
+                df_f = failing_worn.sample(n=min(25, len(failing_worn)))
+                with pyedflib.EdfReader(edf_file) as f:
+                    plot_save_path = os.path.join(plots_path, base_filename + '_ECGs_failedQC.pdf')
+                    plotECG_failedQC(f, df_f, plot_save_path)
 
         Ts.append(['proc_ecg', time.time()])
         
@@ -404,10 +446,15 @@ def procEDF(edf_file, cfg, model, model_info=None):
         log.debug("Timings for %s:\n%s", base_filename, df_time[['task', 'dt']])
 
     except Exception as e:
-        log.error("Processing failed for %s: %s", edf_file, e)
+        # The reason is recorded on the row as well as logged, so the final
+        # summary can name what went wrong per file and it survives into
+        # df_info_summary.csv.gz. Rerun with --verbose for the traceback.
+        reason = f"{type(e).__name__}: {e}"
+        log.error("Processing failed for %s -- %s", base_filename, reason)
         log.debug("Traceback:\n%s", traceback.format_exc())
         dat_info['failed'] = 1
-        
+        dat_info['failure_reason'] = reason
+
     return dat_info
 
 

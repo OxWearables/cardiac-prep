@@ -164,17 +164,34 @@ def main(argv=None):
     df_info_all.to_csv(output_path, compression="gzip", index=False)
 
     duration = time.time() - start_time
-    n_failed = int(df_info_all["failed"].sum()) if "failed" in df_info_all else 0
+    failed = (
+        df_info_all[df_info_all["failed"] == 1]
+        if "failed" in df_info_all
+        else df_info_all.iloc[0:0]
+    )
+    n_failed = len(failed)
+    n_ok = len(edf_files) - n_failed
 
     print("\n-----------------------------------------")
     print("Processing complete.")
-    print(f"   - Files processed:    {len(edf_files)}")
-    if n_failed:
-        print(f"   - Files that FAILED:  {n_failed}  (see errors above)")
+    print(f"   - Succeeded:          {n_ok} of {len(edf_files)}")
     print(f"   - Time elapsed:       {duration / 60:.2f} minutes")
     print(f"   - Average per file:   {duration / len(edf_files):.2f} seconds")
     print(f"   - Summary written to: {output_path}")
     print(f"   - Per-file results:   {config.output_dir}")
+
+    if n_failed:
+        # Name every failure and why. Searching back through interleaved
+        # worker output for the reason is impractical with several files in
+        # flight, so repeat it here.
+        print(f"\n   {n_failed} FILE(S) FAILED:")
+        for _, row in failed.iterrows():
+            name = row.get("Name") or "(unknown file)"
+            reason = str(row.get("failure_reason") or "").strip() or "reason not recorded"
+            print(f"     - {name}")
+            print(f"         {reason}")
+        print("\n   Rerun with --jobs 1 --verbose to see full tracebacks.")
+
     print("-----------------------------------------")
 
     return 1 if n_failed else 0

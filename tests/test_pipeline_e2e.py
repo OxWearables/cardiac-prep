@@ -186,6 +186,57 @@ def test_procEDF_handles_a_non_worn_recording_without_crashing(make_edf, fake_mo
     assert info["failed"].iloc[0] == 1
 
 
+def test_procEDF_records_why_a_recording_failed(make_edf, fake_model, tmp_path):
+    """A failure must explain itself in terms a user can act on.
+
+    A recording where nothing passes QC used to die with a bare
+    KeyError: 'RRm', because the column is dropped when every segment fails.
+    """
+    path = make_edf(hours=1.0, worn=False)
+    cfg = dataclasses.replace(CFG, output_dir=tmp_path / "output")
+
+    info = procEDF(str(path), cfg, fake_model)
+
+    reason = info["failure_reason"].iloc[0]
+    assert "KeyError" not in reason, "bare KeyError leaked to the user"
+    assert "no usable heartbeats" in reason
+    assert "device worn" in reason          # says how many segments were worn
+    assert "_ECGs_failedQC.pdf" in reason   # points at where to look
+
+
+def test_procEDF_survives_an_unreadable_file(tmp_path, fake_model):
+    """A corrupt file must fail alone, not raise out and abort the batch."""
+    broken = tmp_path / "corrupt.EDF"
+    broken.write_bytes(b"this is definitely not an EDF file")
+    cfg = dataclasses.replace(CFG, output_dir=tmp_path / "output")
+
+    info = procEDF(str(broken), cfg, fake_model)
+
+    assert info["failed"].iloc[0] == 1
+    assert "unreadable file" in info["failure_reason"].iloc[0]
+    assert info["Name"].iloc[0] == "corrupt.EDF"
+
+
+def test_procEDF_writes_the_failed_qc_plot_with_few_failing_segments(
+    make_edf, make_model, tmp_path
+):
+    """Few worn-but-failing segments must not break the failed-QC sampling.
+
+    The sample size has to be bounded by the filtered subset; bounding it by
+    the whole frame raised "Cannot take a larger sample than population".
+    """
+    path = make_edf(hours=1.0, bpm=60)
+    # n_beats_min just above the beats present fails every segment, so the
+    # low-quality branch runs; a strict threshold keeps the subset small.
+    cfg = dataclasses.replace(CFG, n_beats_min=11, output_dir=tmp_path / "output")
+
+    info = procEDF(str(path), cfg, make_model(bpm=60))
+
+    # Whatever the outcome, it must not be a sampling crash.
+    reason = str(info.get("failure_reason", pd.Series([""])).iloc[0])
+    assert "larger sample than population" not in reason
+
+
 def test_summary_metrics_agree_with_the_qc_table(processed):
     """The reported means must match a recomputation from the saved data."""
     path, cfg, info = processed

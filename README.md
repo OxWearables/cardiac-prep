@@ -190,7 +190,24 @@ An `./output/` directory containing:
 * **Participant folders**: a `plots` directory with the PDF report, and a `processed_data` directory with detailed CSVs.
 * **Top-level files**: an aggregated `df_info_summary.csv.gz` plus dataset-wide summary plots.
 
-Every row of `df_info_summary.csv.gz` records `model_file` and `model_sha256`, identifying exactly which detector produced those results.
+Every row of `df_info_summary.csv.gz` records `model_file` and `model_sha256`, identifying exactly which detector produced those results. Failed recordings get `failed = 1` and a `failure_reason` explaining why.
+
+### Reading `*_df_qc.csv.gz`
+
+**One row = one 10-second segment** of the recording. The index is seconds from the start, so row `0` is 00:00:00–00:00:10, row `10` is the next segment, and so on.
+
+| Column group | Meaning |
+|---|---|
+| `device_worn`, `clipped_5perc_thrs`, `passed_initialQC` | Per-segment screening: was the device worn, was the signal saturated, did it pass basic signal checks |
+| `passed_finalQC` | Whether the segment's heartbeats were good enough to trust |
+| `N_beats`, `N_RR`, `rr_Cover`, `rr_sd`, `rr_outliers`, `qrs_snr`, `qrs_amp`, `rmssd` | Beat-level measurements |
+| `*_raw` | The measured value, blank wherever QC failed |
+| `*_imputed` | The gap-filled value. **Use these for analysis** |
+| `*_isImputed` | `True` where that value was filled rather than measured |
+
+**Why are the beat columns so often blank?** They are only computed for segments that were actually analysed. A segment is skipped when the device was not worn, the signal was too noisy or clipped to pass initial checks, or the detector found fewer than `n_beats_min` beats. Separately, `RRm_raw` is deliberately blanked wherever `passed_finalQC` is `False`, so blank means "not measurable here", not "missing data".
+
+Lots of blanks therefore means a lot of non-wear time or poor signal quality, and is expected rather than a bug. To judge quality fairly, look at `prop_ECG_worn_passed_finalQC` in the summary file: it measures quality **among worn time only**, so it is not diluted by periods when the device was off.
 
 ---
 
