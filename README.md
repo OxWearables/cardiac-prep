@@ -1,8 +1,8 @@
 # ECG & Accelerometry (EDF) Preprocessing Pipeline
 
-[![CI](https://github.com/OxWearables/preprocessing-edf/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OxWearables/preprocessing-edf/actions/workflows/ci.yml)
+[![CI](https://github.com/OxWearables/cardiac-prep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OxWearables/cardiac-prep/actions/workflows/ci.yml)
 [![Python 3.9–3.12](https://img.shields.io/badge/python-3.9%20%E2%80%93%203.12-blue)](https://www.python.org/downloads/)
-[![Licence: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+[![Licence: Academic Use](https://img.shields.io/badge/licence-academic%20use-green)](LICENSE)
 
 An end-to-end Python pipeline for processing multi-day wearable sensor data from `.EDF` files. It extracts heart rate, heart rate variability (HRV) and physical activity metrics, performs quality control and imputation, and generates summary reports and visualisations.
 
@@ -82,11 +82,11 @@ You only do this once.
 ### Step 1 – Download the code
 
 ```
-git clone https://github.com/OxWearables/preprocessing-edf.git
+git clone https://github.com/OxWearables/cardiac-prep.git
 ```
 
 ```
-cd preprocessing-edf
+cd cardiac-prep
 ```
 
 Stay in this folder for every command that follows.
@@ -263,7 +263,11 @@ Installing also provides `edfproc`, `edfproc-plot` and `edfproc-summary` as comm
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE).
+Academic Use Licence, see [LICENSE](LICENSE). Free for academic, non-commercial
+research and teaching. Commercial use requires a separate licence - contact
+Oxford University Innovation at enquiries@innovation.ox.ac.uk.
+
+Copyright © 2025-2026, University of Oxford.
 
 ## Authors
 * **Stefan van Duijvenboden**

@@ -7,7 +7,7 @@ name = "edfproc"
 version = "1.0.0"
 description = "ECG and accelerometry (EDF) preprocessing pipeline for multi-day wearable recordings"
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 requires-python = ">=3.9,<3.13"
 authors = [
     { name = "Anna Bator" },
@@ -17,7 +17,6 @@ keywords = ["ecg", "hrv", "accelerometry", "wearables", "edf", "physical-activit
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -48,8 +47,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/OxWearables/preprocessing-edf"
-Repository = "https://github.com/OxWearables/preprocessing-edf"
+Homepage = "https://github.com/OxWearables/cardiac-prep"
+Repository = "https://github.com/OxWearables/cardiac-prep"
 
 [project.scripts]
 edfproc = "edfproc.cli:main"
