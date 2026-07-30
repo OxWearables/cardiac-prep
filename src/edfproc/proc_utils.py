@@ -47,11 +47,11 @@ def getSNR(X):
     return SNR, np.ptp(Xm)
 
 
-def getQRSmask(ecg_dc, ix_qc, m_qrs, output_size=250, structure_size=2):
+def getQRSmask(ecg_dc, ix_qc, m_qrs, output_size=250, structure_size=2, threshold=0.5):
     # derive QRS label mask, only analyse sections that passed QC
-    
+
     y_hat = np.zeros((len(ix_qc),output_size)).astype("bool")
-    y_hat[ix_qc] = m_qrs.predict(ecg_dc, verbose=0).squeeze() > 0.5 
+    y_hat[ix_qc] = m_qrs.predict(ecg_dc, verbose=0).squeeze() > threshold
     y_hat = y_hat.flatten()
 
     # filtering
@@ -111,7 +111,7 @@ def getQRS(ecg, mask, fs=250, mask_output_size=250, T=10):
     return df_rr    
 
 
-def getQCmetrics(ecg, rw, wl_qrs = 15, nseg=2500 ,rr_lim=[50, 1250], fs=250):
+def getQCmetrics(ecg, rw, wl_qrs = 15, nseg=2500 ,rr_lim=[50, 1250], fs=250, rr_outlier_factor=1.8):
 
     # w = fc_hp / (fs / 2) # Normalise the frequency
     # b, a = butter(4, w, 'high')
@@ -131,7 +131,7 @@ def getQCmetrics(ecg, rw, wl_qrs = 15, nseg=2500 ,rr_lim=[50, 1250], fs=250):
 
     # Calculate other metrics on the cleaned rr intervals
     rrM, rrC, rrsd = np.median(rr), np.sum(rr)/nseg, np.std(rr)
-    rr_outliers = np.sum(rr > 1.8 * rrM)
+    rr_outliers = np.sum(rr > rr_outlier_factor * rrM)
     
     win_qrs = rw[:, np.newaxis] + np.arange(-wl_qrs, wl_qrs)
     win_qrs = ecg[np.clip(win_qrs, 0, len(ecg) - 1)] # maybe not?

@@ -54,6 +54,13 @@ class Config:
     fs_expected: int = 250
     chunk_hours: int = 24
 
+    # ECG amplitude clipping, in millivolts. ecg_clip_mv is a hard limit applied
+    # before filtering; a segment with >5% of samples beyond it fails QC.
+    # ecg_clip_margin_mv widens the adaptive band used just before the detector,
+    # which sits at the median per-segment peak plus this margin.
+    ecg_clip_mv: float = 4.0
+    ecg_clip_margin_mv: float = 1.0
+
     # ECG quality control
     rr_cover_min: float = 0.75      # min fraction of a segment covered by valid RR intervals
     n_beats_min: int = 5            # min detected beats for a segment to be scored
@@ -76,6 +83,48 @@ class Config:
     # who habitually sleeps outside it.
     night_start_hour: int = 21
     night_end_hour: int = 9
+
+    # ---- Advanced -----------------------------------------------------------
+    # Signal-processing internals. The defaults match the conditions the bundled
+    # QRS detector was trained under, so changing anything below alters what the
+    # model sees and should be checked against the detector's output.
+
+    # Mains interference removed by a notch filter. 50 Hz across most of the
+    # world, 60 Hz in North America and parts of Asia.
+    mains_hz: float = 50.0
+    mains_notch_q: float = 30.0
+
+    # ECG bandpass corners in Hz, applied after the notch.
+    ecg_bandpass_low_hz: float = 2.0
+    ecg_bandpass_high_hz: float = 40.0
+
+    # Per-segment noise gate. Variance outside this range, or a peak-to-peak
+    # below the minimum, marks a segment as too noisy or too flat to score.
+    ecg_var_min: float = 0.0001
+    ecg_var_max: float = 2.0
+    ecg_min_ptp_mv: float = 0.025
+
+    # Probability above which the detector calls a sample part of a QRS complex.
+    # Lower detects more beats at the cost of more false positives.
+    qrs_threshold: float = 0.5
+
+    # An R-R interval longer than this multiple of the segment median counts as
+    # an outlier, most often a missed beat. See also max_rr_outliers.
+    rr_outlier_factor: float = 1.8
+
+    # Accelerometer saturation in milli-g. 4000 suits a +/-4 g device.
+    acc_clip_mg: float = 4000.0
+
+    # Auto-calibrate the accelerometer against gravity before use.
+    acc_calibrate: bool = True
+
+    # Width, in samples, of the median filter that removes baseline steps from
+    # the acceleration magnitude.
+    acc_median_filter_samples: int = 120
+
+    # Longest gap, in seconds, filled by linear interpolation. Longer gaps fall
+    # back to the average for that time of day.
+    impute_gap_max_s: int = 600
 
     @property
     def activity_thresholds(self) -> Dict[str, float]:
@@ -151,6 +200,71 @@ class Config:
 
         if self.chunk_hours < 1:
             raise ConfigError(f"chunk_hours must be at least 1, got {self.chunk_hours}.")
+
+        for name in (
+            "ecg_clip_mv",
+            "ecg_clip_margin_mv",
+            "mains_hz",
+            "mains_notch_q",
+            "acc_clip_mg",
+        ):
+            value = getattr(self, name)
+            if value <= 0:
+                raise ConfigError(f"{name} must be greater than 0, got {value}.")
+
+        # Filters are designed against the sampling rate, so any corner at or
+        # above Nyquist makes scipy fail with a message that does not name the
+        # setting responsible.
+        nyquist = self.fs_expected / 2
+        for name in ("mains_hz", "ecg_bandpass_low_hz", "ecg_bandpass_high_hz"):
+            value = getattr(self, name)
+            if value >= nyquist:
+                raise ConfigError(
+                    f"{name} ({value} Hz) must be below half the sampling rate "
+                    f"({nyquist} Hz for fs_expected={self.fs_expected})."
+                )
+
+        if not 0 < self.ecg_bandpass_low_hz < self.ecg_bandpass_high_hz:
+            raise ConfigError(
+                f"ecg_bandpass_low_hz ({self.ecg_bandpass_low_hz}) must be greater "
+                f"than 0 and less than ecg_bandpass_high_hz "
+                f"({self.ecg_bandpass_high_hz})."
+            )
+
+        if not 0 <= self.ecg_var_min < self.ecg_var_max:
+            raise ConfigError(
+                f"ecg_var_min ({self.ecg_var_min}) must be at least 0 and less "
+                f"than ecg_var_max ({self.ecg_var_max})."
+            )
+
+        if self.ecg_min_ptp_mv < 0:
+            raise ConfigError(
+                f"ecg_min_ptp_mv cannot be negative, got {self.ecg_min_ptp_mv}."
+            )
+
+        if not 0 < self.qrs_threshold < 1:
+            raise ConfigError(
+                f"qrs_threshold must be a probability between 0 and 1 "
+                f"(exclusive), got {self.qrs_threshold}."
+            )
+
+        if self.rr_outlier_factor <= 1:
+            raise ConfigError(
+                f"rr_outlier_factor must be greater than 1, got "
+                f"{self.rr_outlier_factor}. A value of 1 or less would mark "
+                "roughly half of all normal intervals as outliers."
+            )
+
+        if self.acc_median_filter_samples < 1:
+            raise ConfigError(
+                "acc_median_filter_samples must be at least 1, got "
+                f"{self.acc_median_filter_samples}."
+            )
+
+        if self.impute_gap_max_s < 0:
+            raise ConfigError(
+                f"impute_gap_max_s cannot be negative, got {self.impute_gap_max_s}."
+            )
 
         if self.sleep_threshold_mg < 0:
             raise ConfigError(

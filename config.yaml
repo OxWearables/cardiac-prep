@@ -112,3 +112,94 @@ night_end_hour: 9
 
 segment_seconds: 10
 fs_expected: 250
+
+
+# =============================================================================
+# ADVANCED
+# =============================================================================
+#
+# Everything below controls the signal processing itself. The defaults match
+# the conditions the bundled QRS detector was trained under, so changing them
+# changes what the model sees. If you alter anything here, check the effect on
+# detection before trusting the results - `python plot_subject.py <name>` draws
+# the detected beats over the raw trace.
+#
+# The one exception is mains_hz, which you should set correctly for your
+# country regardless.
+
+
+# ---- ECG filtering ---------------------------------------------------------
+
+# Mains frequency removed by a notch filter, in Hz. 50 across most of the
+# world; set 60 in North America and parts of Asia, otherwise mains hum is
+# left in the signal.
+mains_hz: 50.0
+
+# Notch width. Higher is narrower, removing less of the surrounding signal.
+mains_notch_q: 30.0
+
+# Bandpass corners in Hz, applied after the notch. Both must sit below half
+# the sampling rate.
+ecg_bandpass_low_hz: 2.0
+ecg_bandpass_high_hz: 40.0
+
+
+# ---- ECG amplitude clipping ------------------------------------------------
+#
+# Both values are in millivolts. Lower them to clip more aggressively.
+
+# Hard limit applied before filtering. A segment with more than 5% of its
+# samples beyond this is treated as saturated and fails quality control.
+ecg_clip_mv: 4.0
+
+# Just before beat detection the signal is clipped again to a band that adapts
+# to the recording: the median per-segment peak, plus this margin. Most QRS
+# complexes fall within about 1 mV, so tightening this suppresses artefact -
+# but movement during exercise genuinely exceeds it, and clipping too hard
+# there removes real signal along with the noise.
+ecg_clip_margin_mv: 1.0
+
+
+# ---- ECG noise gate --------------------------------------------------------
+#
+# A segment whose variance falls outside this range, or whose peak-to-peak is
+# below the minimum, is judged too noisy or too flat to score at all.
+
+ecg_var_min: 0.0001
+ecg_var_max: 2.0
+ecg_min_ptp_mv: 0.025
+
+
+# ---- Beat detection --------------------------------------------------------
+
+# Probability above which the detector calls a sample part of a QRS complex.
+# Lowering this finds more beats and more false positives; raising it does the
+# reverse. 0.5 is the usual starting point.
+qrs_threshold: 0.5
+
+# An R-R interval longer than this multiple of the segment median counts as an
+# outlier, usually a missed beat. Works together with max_rr_outliers above.
+rr_outlier_factor: 1.8
+
+
+# ---- Accelerometer ---------------------------------------------------------
+
+# Saturation limit in milli-g. 4000 suits a +/-4 g device; raise it to 8000
+# for a +/-8 g one, or clipping will be over-reported.
+acc_clip_mg: 4000.0
+
+# Auto-calibrate the accelerometer against gravity before use. Turn off only
+# if your data is already calibrated.
+acc_calibrate: true
+
+# Width in samples of the median filter that removes baseline steps from the
+# acceleration magnitude.
+acc_median_filter_samples: 120
+
+
+# ---- Gap filling -----------------------------------------------------------
+
+# Longest gap in seconds filled by linear interpolation. Gaps longer than this
+# are filled from the average for that time of day instead. Set to 0 to
+# interpolate nothing.
+impute_gap_max_s: 600

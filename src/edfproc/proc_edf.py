@@ -113,23 +113,42 @@ def procECG(f, i, chunk_samples, fname, cfg, model, signal_label='ECG', fs=250):
 
     ecg = f.readSignal(iECG, start=start, n=n_samples)
     ecg = ecg / 1000
-    ecg, i_device_worn, ix_non_clipped, ix_pre_qc = prepSig(ecg=ecg, fs=fs, nseg=nseg)
+    ecg, i_device_worn, ix_non_clipped, ix_pre_qc = prepSig(
+        ecg=ecg,
+        fs=fs,
+        nseg=nseg,
+        clip_val=cfg.ecg_clip_mv,
+        var_range=[cfg.ecg_var_min, cfg.ecg_var_max],
+        min_ptp=cfg.ecg_min_ptp_mv,
+        fs_filt=[cfg.ecg_bandpass_low_hz, cfg.ecg_bandpass_high_hz],
+        mains_hz=cfg.mains_hz,
+        mains_q=cfg.mains_notch_q,
+    )
     ix_qc = i_device_worn & ix_non_clipped & ix_pre_qc
     df_qc = pd.DataFrame({'device_worn': i_device_worn, 'clipped_5perc_thrs': ~ix_non_clipped, 'passed_initialQC': ix_qc})
     df_qc = df_qc.set_index(df_qc.index * cfg.segment_seconds)
     if not np.any(ix_qc):
         df_qc['passed_finalQC'] = False
         return df_qc
-    ecg_dc = downsampleECG(ecg[ix_qc], fs_org=fs)
+    ecg_dc = downsampleECG(ecg[ix_qc], fs_org=fs, thrs_mar=cfg.ecg_clip_margin_mv)
     ecg = ecg.flatten()
-    qrs_mask = getQRSmask(ecg_dc, ix_qc, model)
+    qrs_mask = getQRSmask(ecg_dc, ix_qc, model, threshold=cfg.qrs_threshold)
     df_rw = getQRS(mask=qrs_mask, ecg=ecg)
     df_snr = pd.DataFrame(df_rw.groupby(df_rw.index).size(), columns=['N_beats'])
     idx_u = df_snr[df_snr['N_beats'] >= cfg.n_beats_min].index.unique()
     grouped_rw = df_rw.groupby(df_rw.index)
     t_rw_cache = {x: group['t_rw'].to_numpy() for x, group in grouped_rw}
     rr_lim_samples = [int(cfg.rr_min_ms / 1000 * fs), int(cfg.rr_max_ms / 1000 * fs)]
-    results = [getQCmetrics(ecg, t_rw_cache[x], rr_lim=rr_lim_samples, nseg=nseg) for x in idx_u]
+    results = [
+        getQCmetrics(
+            ecg,
+            t_rw_cache[x],
+            rr_lim=rr_lim_samples,
+            nseg=nseg,
+            rr_outlier_factor=cfg.rr_outlier_factor,
+        )
+        for x in idx_u
+    ]
     df_metrics = pd.DataFrame(results, index=idx_u, columns=['N_RR', 'RRm', 'rr_Cover', 'rr_sd', 'rr_outliers', 'qrs_snr', 'qrs_amp', 'rmssd'])
     df_snr = df_snr.join(df_metrics, how='left')
     df_qc = df_qc.join(df_snr, how='left')
@@ -377,13 +396,20 @@ def procEDF(edf_file, cfg, model, model_info=None):
 
         Ts.append(['proc_ecg', time.time()])
         
-        df_acc, dat_info_acc, _ = readACC(edf_file, start_time)
+        df_acc, dat_info_acc, _ = readACC(
+            edf_file,
+            start_time,
+            clip_val=cfg.acc_clip_mg,
+            T=cfg.segment_seconds,
+            do_cal=cfg.acc_calibrate,
+            m_filt_size=cfg.acc_median_filter_samples,
+        )
         dat_info = pd.concat([dat_info, dat_info_acc], axis=1)
         df_qc = df_qc.join(df_acc, how='left')
         df_qc.loc[~df_qc['device_worn'], 'acc'] = np.nan
 
-        df_qc = doImp(df_qc, 'RRm')
-        df_qc = doImp(df_qc, 'acc')
+        df_qc = doImp(df_qc, 'RRm', gap_lim=cfg.impute_gap_max_s, tseg=cfg.segment_seconds)
+        df_qc = doImp(df_qc, 'acc', gap_lim=cfg.impute_gap_max_s, tseg=cfg.segment_seconds)
         
         # Calculate all summary metrics using the new 10-minute window method
         summary_metrics = calculate_summary_metrics(df_qc, cfg)

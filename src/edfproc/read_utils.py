@@ -117,7 +117,8 @@ def readACC(edfFile, tstamp, clip_val=4000,T=10, do_cal=True, calib_cube=0.2, ca
  
     return dat.groupby(dat.index)[['acc', 'acc_clipped']].mean(), dat_info, dat
     
-def prepSig(ecg,nseg=2500,fs=250, clip_val=4,var_range=[0.0001,2], min_ptp=0.025, fs_filt=[2,40]):
+def prepSig(ecg,nseg=2500,fs=250, clip_val=4,var_range=[0.0001,2], min_ptp=0.025, fs_filt=[2,40],
+            mains_hz=50.0, mains_q=30.0):
     
     if (len(ecg) % nseg)>0: # pad if needed
         pad_size = nseg - len(ecg) % nseg # padding size
@@ -136,13 +137,10 @@ def prepSig(ecg,nseg=2500,fs=250, clip_val=4,var_range=[0.0001,2], min_ptp=0.025
     ix_non_clipped = np.mean(np.abs(ecg)>clip_val,axis=-1)<.05
 
     ecg = np.clip(ecg.flatten(), -clip_val, clip_val)
-    # 50Hz notch filter, yes - I have seen extreme noise in this band despite wearable device 
-    # Notch filter design
-    f0 = 50.0  # Frequency to remove (Hz)
-    Q = 30.0   # Quality factor (higher = narrower notch)
-
-    # Design notch filter
-    b, a = iirnotch(f0, Q, fs)
+    # Mains notch filter, yes - I have seen extreme noise in this band despite wearable device.
+    # 50 Hz across most of the world, 60 Hz in North America and parts of Asia.
+    # Q is the quality factor (higher = narrower notch).
+    b, a = iirnotch(mains_hz, mains_q, fs)
     ecg = filtfilt(b,a,ecg).astype("float32")
     # ecg = filtfilt(b,a,ecg).astype("float16")
 
