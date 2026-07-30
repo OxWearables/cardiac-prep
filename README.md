@@ -43,7 +43,7 @@ Add `--show` to open the plots in a window as well as saving them.
 ---
 
 ## Features ✨
-* **Parallel Processing**: Uses all available **CPU** cores (no GPU needed).
+* **Parallel Processing**: Uses all **CPU** cores except one, so your machine stays usable (no GPU needed). Configurable via `n_processes`.
 * **Preprocessing**: QRS detection, artifact removal, signal quality assessment.
 * **Data Imputation**: Linear interpolation for short gaps, time-of-day averaging for longer ones.
 * **Comprehensive Metrics**:
