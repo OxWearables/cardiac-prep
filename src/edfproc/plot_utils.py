@@ -181,8 +181,15 @@ def plot_24hr_profile_for_report(df_24hr, save_path):
     df_24hr['time_str'] = df_24hr['hour'].astype(str).str.zfill(2) + ':' + df_24hr['minute'].astype(str).str.zfill(2)
     sns.set_theme(style="whitegrid")
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(df_24hr['time_str'], df_24hr['HRm_smoothed'], color=PRIMARY_BLUE)
-    ax.set_xticks(df_24hr['time_str'][::120]); ax.tick_params(axis='x', rotation=45)
+    # Plot against minute-of-day positions rather than the "HH:MM" strings.
+    # Passing the strings makes matplotlib treat them as categories, which it
+    # logs an INFO notice about because they also parse as times, and which
+    # spaces points evenly regardless of any gaps.
+    positions = range(len(df_24hr))
+    ax.plot(positions, df_24hr['HRm_smoothed'], color=PRIMARY_BLUE)
+    ax.set_xticks(list(positions)[::120])
+    ax.set_xticklabels(df_24hr['time_str'][::120])
+    ax.tick_params(axis='x', rotation=45)
     ax.set_title('Typical 24-Hour Heart Rate Profile', fontsize=16)
     ax.set_xlabel('Time of Day'); ax.set_ylabel('Median Heart Rate (BPM)')
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
