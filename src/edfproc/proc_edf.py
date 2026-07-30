@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 import pyedflib
 
+from .io_utils import atomic_write_csv
 from .logging_utils import configure_logging, get_logger
 from .model_utils import find_model, model_fingerprint
 from .plot_utils import (
@@ -412,7 +413,7 @@ def procEDF(edf_file, cfg, model, model_info=None):
         dat_info['prop_ECG_worn_passed_finalQC'] = mean_qc # Taken from mean_qc calculation above
         dat_info['frac_RR_imp'] = df_qc['RRm_isImputed'].mean()
         
-        df_qc.to_csv(os.path.join(data_path, base_filename + "_df_qc.csv.gz"), compression='gzip')
+        atomic_write_csv(df_qc, os.path.join(data_path, base_filename + "_df_qc.csv.gz"))
         plotFunc(df_qc=df_qc.copy(), outpath=plots_path, edf_file=edf_file, mrk_hr='HRm_imputed', mrk_acc='acc_imputed')
 
         profile_plot_path = None

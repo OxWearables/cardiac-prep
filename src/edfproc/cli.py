@@ -15,6 +15,7 @@ import pandas as pd
 
 from . import __version__
 from .config import ConfigError, load_config
+from .io_utils import atomic_write_csv
 from .logging_utils import configure_logging, get_logger
 from .model_utils import ModelError, find_model
 
@@ -161,7 +162,7 @@ def main(argv=None):
 
     df_info_all = pd.concat(results, ignore_index=True)
     output_path = os.path.join(str(config.output_dir), "df_info_summary.csv.gz")
-    df_info_all.to_csv(output_path, compression="gzip", index=False)
+    atomic_write_csv(df_info_all, output_path, index=False)
 
     duration = time.time() - start_time
     failed = (
