@@ -84,9 +84,9 @@ pip install -r requirements.txt
 
 This takes several minutes. It is finished when your prompt reappears.
 
-## Step 4 - Download the heart-beat detector
+## Step 4 - Download the heartbeat detector
 
-The pipeline uses a machine-learning model to find heartbeats. This file is
+The pipeline uses a machine learning model to find heartbeats. This file is
 **not** included in the repository.
 
 1. Download it from: **[TODO: ADD DOWNLOAD LINK]**
