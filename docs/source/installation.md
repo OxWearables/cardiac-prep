@@ -84,18 +84,34 @@ pip install -r requirements.txt
 
 This takes several minutes. It is finished when your prompt reappears.
 
-## Step 4 - Download the heartbeat detector
+## Step 4 - Get the heartbeat detector
 
-The pipeline uses a machine learning model to find heartbeats. This file is
-**not** included in the repository.
+The pipeline uses a machine learning model to find heartbeats. It is too large
+to keep in the repository, so it is downloaded separately.
 
-1. Download it from: **[TODO: ADD DOWNLOAD LINK]**
-2. Put the `.keras` file into the `models` folder.
+**You do not normally need to do anything here.** The first time you run the
+pipeline it fetches the weights into your `models` folder automatically, checks
+them against a known checksum, and carries on.
+
+To fetch them ahead of time, which is worth doing before working somewhere
+without a reliable connection:
+
+```text
+cardiac-prep download
+```
+
+:::{admonition} No internet on the machine that processes your data?
+:class: tip
+
+Run `cardiac-prep download --model-dir /somewhere` on a machine that does have
+a connection, copy the `.keras` file across, and set `auto_download_model: false`
+in your `config.yaml`.
+:::
 
 The pipeline finds the file by extension, so the exact name does not matter -
-but there must be exactly one `.keras` file in that folder. Every output row
-records the file name and its SHA-256, so you can always tell which detector
-produced a given result.
+but there must be exactly one `.keras` file in that folder, otherwise it will
+refuse to guess. Every output row records the file name and its SHA-256, so you
+can always tell which detector produced a given result.
 
 ## Step 5 - Check it works
 

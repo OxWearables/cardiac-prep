@@ -45,6 +45,9 @@ class Config:
     # Leave model_path unset to auto-discover the single .keras file in model_dir.
     model_path: Optional[Path] = None
 
+    # Fetch the weights automatically when model_dir holds none.
+    auto_download_model: bool = True
+
     # How much of the machine to use. None means "all cores but one".
     n_processes: Optional[int] = None
 

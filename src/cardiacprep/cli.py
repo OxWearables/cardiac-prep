@@ -17,7 +17,8 @@ from . import __version__
 from .config import ConfigError, load_config
 from .io_utils import atomic_write_csv
 from .logging_utils import configure_logging, get_logger
-from .model_utils import ModelError, find_model
+from .model_download import ensure_model
+from .model_utils import ModelError
 
 EDF_SUFFIXES = (".edf",)
 
@@ -112,8 +113,14 @@ def main(argv=None):
         return 2
 
     # Check the model before starting a long run, not thirty minutes into one.
+    # This is also where a first run fetches the weights, so the download
+    # happens once, up front, rather than inside a worker process.
     try:
-        model_path = find_model(config.model_dir, config.model_path)
+        model_path = ensure_model(
+            config.model_dir,
+            config.model_path,
+            auto_download=config.auto_download_model,
+        )
     except ModelError as exc:
         print(f"\nCould not load the QRS detector:\n\n{exc}\n", file=sys.stderr)
         return 2

@@ -34,6 +34,10 @@ COMMANDS: Dict[str, Command] = {
         "cardiacprep.init_config",
         "Create a config.yaml you can edit.",
     ),
+    "download": Command(
+        "cardiacprep.model_download",
+        "Download the QRS detector weights.",
+    ),
     "process": Command(
         "cardiacprep.cli",
         "Process .edf recordings into per-participant metrics and reports.",

@@ -35,6 +35,12 @@ model_dir: ./models
 # side by side and need to choose one.
 model_path: ~
 
+# Fetch the detector weights automatically the first time you run, if
+# model_dir does not already contain them. Set to false on a machine with no
+# internet access, and download them separately instead - or fetch them ahead
+# of time with:  cardiac-prep download
+auto_download_model: true
+
 
 # ---- How much of your computer to use --------------------------------------
 
