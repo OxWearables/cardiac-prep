@@ -1,0 +1,7 @@
+/* Project-specific overrides on top of sphinx_rtd_theme. */
+
+/* Stop wide output tables being squeezed into a narrow column. */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}

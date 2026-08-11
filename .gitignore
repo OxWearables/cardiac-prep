@@ -31,5 +31,10 @@ output/*
 models/*
 !models/README.md
 
+# Documentation build output. configuration.md is generated from the comments
+# in config.yaml on every build, so it is never committed - edit config.yaml.
+docs/_build/
+docs/source/configuration.md
+
 *.zip
 *.tar.gz
