@@ -6,8 +6,10 @@ Run the pipeline from a clone of this repository, without installing anything.
     python process.py --input /path/to/edfs --output /path/to/results
     python process.py --help
 
-If you have installed the package (pip install .), the 'edfproc' command does
-exactly the same thing from any folder.
+This is a shortcut for the 'process' subcommand. If you have installed the
+package (pip install .), the same thing from any folder is:
+
+    cardiac-prep process
 """
 __author__ = "Anna Bator"
 
@@ -18,7 +20,7 @@ from pathlib import Path
 # works in a fresh clone with no install step.
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from edfproc.cli import main  # noqa: E402  (import must follow the path setup)
+from edfproc.entry import main  # noqa: E402  (import must follow the path setup)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(["process", *sys.argv[1:]]))

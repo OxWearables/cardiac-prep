@@ -5,8 +5,10 @@ Generate dataset-level summary plots, from a clone of this repository.
     python summarise_dataset.py
     python summarise_dataset.py --help
 
-If you have installed the package (pip install .), the 'edfproc-summary'
-command does exactly the same thing from any folder.
+This is a shortcut for the 'summarise' subcommand. If you have installed the
+package (pip install .), the same thing from any folder is:
+
+    cardiac-prep summarise
 """
 __author__ = "Anna Bator"
 
@@ -17,7 +19,7 @@ from pathlib import Path
 # works in a fresh clone with no install step.
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from edfproc.dataset_summary import main  # noqa: E402  (import must follow the path setup)
+from edfproc.entry import main  # noqa: E402  (import must follow the path setup)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(["summarise", *sys.argv[1:]]))

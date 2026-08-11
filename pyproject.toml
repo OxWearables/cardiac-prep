@@ -51,9 +51,10 @@ Homepage = "https://github.com/OxWearables/cardiac-prep"
 Repository = "https://github.com/OxWearables/cardiac-prep"
 
 [project.scripts]
-edfproc = "edfproc.cli:main"
-edfproc-plot = "edfproc.subject_plots:main"
-edfproc-summary = "edfproc.dataset_summary:main"
+# One command with subcommands: process, summarise, inspect.
+cardiac-prep = "edfproc.entry:main"
+# Kept as an alias because the package is still importable as edfproc.
+edfproc = "edfproc.entry:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

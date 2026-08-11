@@ -86,7 +86,6 @@ def test_all_plot_kinds_are_written(tmp_path):
         "s1_acc_heatmap.png",
         "s1_daily_heart_rate.png",
         "s1_hr_heatmap.png",
-        "s1_timeseries.png",
     ]
 
 
@@ -95,11 +94,17 @@ def test_single_kind_writes_only_that_plot(tmp_path):
     _make_subject(out, "s1")
 
     assert subject_plots.main(
-        ["--subject", "s1", "--output", str(out), "--kind", "timeseries"]
+        ["--subject", "s1", "--output", str(out), "--kind", "daily"]
     ) == 0
 
     written = list((out / "s1" / "plots").glob("*.png"))
-    assert [p.name for p in written] == ["s1_timeseries.png"]
+    assert [p.name for p in written] == ["s1_daily_heart_rate.png"]
+
+
+def test_timeseries_is_no_longer_a_plot_kind():
+    # procECG already writes this trace for every recording via
+    # plot_utils.plotFunc, so offering it here too was two ways to one figure.
+    assert "timeseries" not in subject_plots.PLOT_KINDS
 
 
 def test_no_save_writes_nothing(tmp_path):
