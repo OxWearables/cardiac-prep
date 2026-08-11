@@ -42,6 +42,10 @@ python plot_subject.py --subject NAME_FROM_THE_LIST
 
 Add `--show` to open the plots in a window as well as saving them.
 
+> **Installed the package?** These three scripts are shortcuts for one command
+> with three subcommands, runnable from any folder:
+> `cardiac-prep process`, `cardiac-prep summarise`, `cardiac-prep inspect`.
+
 > **First time here?** Do the [Setup](#setup-) below first. Add `--help` to any command to see its options.
 
 ---
@@ -257,7 +261,15 @@ pytest
 
 Tests use synthetic data only, so no recordings or model weights are needed. GitHub Actions runs the tests and `ruff check .` on Python 3.9–3.12 for every push.
 
-Installing also provides `edfproc`, `edfproc-plot` and `edfproc-summary` as commands runnable from any folder.
+Installing also provides `cardiac-prep`, runnable from any folder, with three subcommands:
+
+```
+cardiac-prep process      # same as python process.py
+cardiac-prep summarise    # same as python summarise_dataset.py
+cardiac-prep inspect      # same as python plot_subject.py
+```
+
+`cardiac-prep --help` lists them; `cardiac-prep <command> --help` shows the options for one. `edfproc` is kept as an alias for the same command.
 
 ---
 

@@ -25,30 +25,16 @@ from .subject_data import (
 
 log = get_logger("plots")
 
-PLOT_KINDS = ("timeseries", "daily", "profile", "heatmap")
+# A timeseries plot used to live here too, but procECG already writes the same
+# heart-rate-and-movement trace for every recording (plot_utils.plotFunc), so
+# it was two ways to produce one figure. The 24-hour profile is kept even
+# though the PDF report contains one, because the report only draws it for
+# recordings longer than three days with all 24 hours covered.
+PLOT_KINDS = ("daily", "profile", "heatmap")
 
 DAYS_ORDER = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
 ]
-
-
-def plot_timeseries(df_qc, subject_id):
-    """Heart rate and movement at full 10-second resolution."""
-    fig, ax_hr = plt.subplots(figsize=(14, 5))
-    fig.suptitle(f"10-second heart rate and activity: {subject_id}", fontsize=15)
-
-    ax_hr.plot(df_qc.index, df_qc["HRm_imputed"], color="tab:blue", linewidth=0.8)
-    ax_hr.set_xlabel("Time")
-    ax_hr.set_ylabel("Heart rate (bpm)", color="tab:blue")
-    ax_hr.tick_params(axis="y", labelcolor="tab:blue")
-
-    ax_acc = ax_hr.twinx()
-    ax_acc.plot(df_qc.index, df_qc["acc_imputed"], color="tab:orange", alpha=0.6, linewidth=0.8)
-    ax_acc.set_ylabel("Acceleration (milli-g)", color="tab:orange")
-    ax_acc.tick_params(axis="y", labelcolor="tab:orange")
-
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
-    return fig
 
 
 def plot_daily(df_qc, subject_id):
@@ -133,6 +119,10 @@ def parse_args(argv=None):
             "  %(prog)s --list\n"
             "  %(prog)s --subject 001_recording\n"
             "  %(prog)s --subject 001_recording --kind heatmap --show\n"
+            "\n"
+            "The per-participant PDF report written during processing already\n"
+            "contains the heart rate and movement trace; these plots are for\n"
+            "looking more closely at one person afterwards.\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -189,7 +179,7 @@ def main(argv=None):
         if not subjects:
             print(
                 f"No processed participants found in '{config.output_dir}'.\n"
-                "Run the pipeline first:  python process.py",
+                "Run the pipeline first:  cardiac-prep process",
                 file=sys.stderr,
             )
             return 1
@@ -218,8 +208,6 @@ def main(argv=None):
         plots_dir.mkdir(parents=True, exist_ok=True)
 
     figures = []
-    if "timeseries" in kinds:
-        figures.append(("timeseries", plot_timeseries(df_qc, args.subject)))
     if "daily" in kinds:
         figures.append(("daily_heart_rate", plot_daily(df_qc, args.subject)))
     if "profile" in kinds:
