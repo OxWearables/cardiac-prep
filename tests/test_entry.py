@@ -7,7 +7,7 @@ the dispatcher would only duplicate those.
 
 import pytest
 
-from edfproc import entry
+from cardiacprep import entry
 
 
 def test_no_arguments_prints_usage_and_fails(capsys):
@@ -26,7 +26,7 @@ def test_help_succeeds_and_lists_every_command(flag, capsys):
 
 
 def test_version_flag(capsys):
-    from edfproc import __version__
+    from cardiacprep import __version__
 
     assert entry.main(["--version"]) == 0
     assert __version__ in capsys.readouterr().out
@@ -46,7 +46,7 @@ def test_dispatches_to_the_named_subcommand(monkeypatch):
         seen["argv"] = argv
         return 0
 
-    module = pytest.importorskip("edfproc.subject_plots")
+    module = pytest.importorskip("cardiacprep.subject_plots")
     monkeypatch.setattr(module, "main", fake_main)
 
     assert entry.main(["inspect", "--list", "--output", "somewhere"]) == 0
@@ -54,7 +54,7 @@ def test_dispatches_to_the_named_subcommand(monkeypatch):
 
 
 def test_subcommand_return_code_is_passed_through(monkeypatch):
-    module = pytest.importorskip("edfproc.subject_plots")
+    module = pytest.importorskip("cardiacprep.subject_plots")
     monkeypatch.setattr(module, "main", lambda argv: 3)
 
     assert entry.main(["inspect"]) == 3
@@ -66,7 +66,7 @@ def test_aliases_resolve_to_a_real_command(alias, target):
 
 
 def test_american_spelling_is_accepted(monkeypatch):
-    module = pytest.importorskip("edfproc.dataset_summary")
+    module = pytest.importorskip("cardiacprep.dataset_summary")
     monkeypatch.setattr(module, "main", lambda argv: 0)
 
     assert entry.main(["summarize"]) == 0

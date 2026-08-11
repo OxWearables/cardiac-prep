@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from edfproc import dataset_summary, subject_plots
+from cardiacprep import dataset_summary, subject_plots
 
 
 @pytest.fixture(autouse=True)

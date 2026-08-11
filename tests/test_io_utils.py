@@ -12,7 +12,7 @@ import gzip
 import pandas as pd
 import pytest
 
-from edfproc.io_utils import atomic_write_csv
+from cardiacprep.io_utils import atomic_write_csv
 
 
 class ExplodingFrame:

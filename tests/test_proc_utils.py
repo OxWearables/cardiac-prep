@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from edfproc.proc_utils import doImp, downsampleECG, getQCmetrics, getQRS, getSNR
+from cardiacprep.proc_utils import doImp, downsampleECG, getQCmetrics, getQRS, getSNR
 
 # getSNR
 

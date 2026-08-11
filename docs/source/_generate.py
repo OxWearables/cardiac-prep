@@ -148,7 +148,7 @@ def setting_names(sections: List[Section]) -> set:
 
 
 def _defaults_from_dataclass() -> Dict[str, str]:
-    from edfproc.config import Config
+    from cardiacprep.config import Config
 
     return {f.name: repr(getattr(Config(), f.name)) for f in fields(Config)}
 

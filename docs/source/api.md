@@ -6,7 +6,7 @@ line. Generated from the docstrings in the source.
 ## Configuration
 
 ```{eval-rst}
-.. automodule:: edfproc.config
+.. automodule:: cardiacprep.config
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,51 +15,51 @@ line. Generated from the docstrings in the source.
 ## Entry point
 
 ```{eval-rst}
-.. automodule:: edfproc.entry
+.. automodule:: cardiacprep.entry
    :members:
 ```
 
 ## Reading and preparing signals
 
 ```{eval-rst}
-.. automodule:: edfproc.read_utils
+.. automodule:: cardiacprep.read_utils
    :members:
 ```
 
 ## Processing
 
 ```{eval-rst}
-.. automodule:: edfproc.proc_utils
+.. automodule:: cardiacprep.proc_utils
    :members:
 ```
 
 ```{eval-rst}
-.. automodule:: edfproc.proc_edf
+.. automodule:: cardiacprep.proc_edf
    :members:
 ```
 
 ## Loading results back in
 
 ```{eval-rst}
-.. automodule:: edfproc.subject_data
+.. automodule:: cardiacprep.subject_data
    :members:
 ```
 
 ## Model weights
 
 ```{eval-rst}
-.. automodule:: edfproc.model_utils
+.. automodule:: cardiacprep.model_utils
    :members:
 ```
 
 ## Utilities
 
 ```{eval-rst}
-.. automodule:: edfproc.io_utils
+.. automodule:: cardiacprep.io_utils
    :members:
 ```
 
 ```{eval-rst}
-.. automodule:: edfproc.logging_utils
+.. automodule:: cardiacprep.logging_utils
    :members:
 ```

@@ -71,5 +71,5 @@ cardiac-prep inspect      # same as python plot_subject.py
 `cardiac-prep --help` lists the subcommands, and `cardiac-prep <command>
 --help` shows the options for one of them.
 
-The package is still imported as `edfproc` in Python code; only the command is
-named after the repository.
+In Python code the package is imported as `cardiacprep`, without the hyphen,
+since a hyphen is not valid in an import name.

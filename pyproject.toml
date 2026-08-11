@@ -3,8 +3,12 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "edfproc"
-version = "1.0.0"
+# Distribution and import name are the same, as in actinet and stepcount:
+# pip install cardiacprep, then import cardiacprep. Note PyPI treats only
+# '-' and '_' as equivalent, so this is a different name from 'cardiac-prep'.
+name = "cardiacprep"
+# Read from cardiacprep.__version__ so a release only bumps one place.
+dynamic = ["version"]
 description = "ECG and accelerometry (EDF) preprocessing pipeline for multi-day wearable recordings"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -52,10 +56,18 @@ Repository = "https://github.com/OxWearables/cardiac-prep"
 
 [project.scripts]
 # One command with subcommands: process, summarise, inspect.
-cardiac-prep = "edfproc.entry:main"
+cardiac-prep = "cardiacprep.entry:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "cardiacprep.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# The annotated settings template, copied out by 'cardiac-prep init'. Someone
+# who installs from PyPI has no clone and so no config.yaml of their own.
+[tool.setuptools.package-data]
+cardiacprep = ["default_config.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

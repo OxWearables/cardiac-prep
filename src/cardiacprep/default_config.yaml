@@ -1,0 +1,205 @@
+# =============================================================================
+# EDF preprocessing pipeline - settings
+# =============================================================================
+#
+# Edit this file to change how the pipeline runs. You should never need to edit
+# any .py file.
+#
+# Every setting below is optional. Delete a line (or this whole file) and the
+# pipeline falls back to the same default shown here.
+#
+# Format notes:
+#   - Indentation must use SPACES, never tabs.
+#   - Always put a space after the colon:  key: value
+#   - Use  ~  to mean "not set".
+#
+# Anything on the command line overrides this file, for example:
+#   python process.py --input /path/to/my/edfs --output /path/to/results
+# -----------------------------------------------------------------------------
+
+
+# ---- Where your files are --------------------------------------------------
+
+# Folder containing the .edf / .EDF files you want to process.
+input_dir: ./input_data
+
+# Folder where results are written. Created automatically if missing.
+output_dir: ./output
+
+# Folder containing the QRS detector weights (a .keras file).
+# The weights are downloaded separately - see models/README.md.
+model_dir: ./models
+
+# Normally leave this unset: the pipeline finds the single .keras file in
+# model_dir on its own. Set an explicit path only if you keep several models
+# side by side and need to choose one.
+model_path: ~
+
+
+# ---- How much of your computer to use --------------------------------------
+
+# Number of files to process at the same time.
+# Leave unset to use all CPU cores except one, which keeps your machine usable
+# while the pipeline runs. Set to 1 if you want to see errors clearly.
+n_processes: ~
+
+# Hours of recording loaded into memory at a time. Lower this if you run out
+# of memory on very long recordings.
+chunk_hours: 24
+
+
+# ---- ECG quality control ---------------------------------------------------
+#
+# These decide which 10-second segments of ECG are trustworthy enough to use.
+# The defaults are reasonable; change them only with a specific reason.
+
+# Minimum fraction of a segment that must be covered by valid heartbeats.
+rr_cover_min: 0.75
+
+# Minimum number of detected beats before a segment is scored at all.
+n_beats_min: 5
+
+# Shortest and longest believable gap between heartbeats, in milliseconds.
+# 250 ms is 240 bpm; 2500 ms is 24 bpm. Anything outside this is an artefact.
+rr_min_ms: 250
+rr_max_ms: 2500
+
+# How many implausibly long gaps (a missed beat) a segment may contain.
+max_rr_outliers: 1
+
+# If less than this fraction of worn-time ECG passes quality control, the
+# pipeline prints a warning and saves example failing traces so you can look
+# at what went wrong.
+qc_warn_below: 0.75
+
+
+# ---- Physical activity intensity -------------------------------------------
+#
+# Cut-points in milli-g (mg) for Mean Amplitude Deviation, from
+# Etzkorn et al. (2024): Zio XT chest-worn cut-points derived in 381 older
+# adults in the ARIC study, mapped from waist-worn ActiGraph GT3X.
+#
+# IMPORTANT: these were validated in older adults (median age 78). If your
+# participants are younger, these boundaries may not describe them well.
+# Must be listed smallest to largest.
+
+activity_very_light_mg: 9.04
+activity_light_mg: 28.19
+activity_moderate_mg: 58.08
+
+
+# ---- Resting heart rate and HRV --------------------------------------------
+
+# Movement below this (in mg) counts as being at rest.
+sleep_threshold_mg: 9.04
+
+# Clock window used to find overnight rest, as whole hours (0-23).
+# The default 21:00-09:00 assumes a conventional sleep schedule.
+#
+# WARNING: this misclassifies anyone who sleeps outside these hours - shift
+# workers, or someone who regularly sleeps 02:00-11:00. If that describes your
+# participants, adjust the window here. Automatic per-participant detection of
+# the main sleep period is planned.
+night_start_hour: 21
+night_end_hour: 9
+
+
+# ---- Signal format ---------------------------------------------------------
+#
+# The bundled QRS detector was trained on 10-second segments of 250 Hz ECG.
+# Changing these requires a model retrained to match, so leave them alone
+# unless you know exactly what you are doing.
+
+segment_seconds: 10
+fs_expected: 250
+
+
+# =============================================================================
+# ADVANCED
+# =============================================================================
+#
+# Everything below controls the signal processing itself. The defaults match
+# the conditions the bundled QRS detector was trained under, so changing them
+# changes what the model sees. If you alter anything here, check the effect on
+# detection before trusting the results - `python plot_subject.py <name>` draws
+# the detected beats over the raw trace.
+#
+# The one exception is mains_hz, which you should set correctly for your
+# country regardless.
+
+
+# ---- ECG filtering ---------------------------------------------------------
+
+# Mains frequency removed by a notch filter, in Hz. 50 across most of the
+# world; set 60 in North America and parts of Asia, otherwise mains hum is
+# left in the signal.
+mains_hz: 50.0
+
+# Notch width. Higher is narrower, removing less of the surrounding signal.
+mains_notch_q: 30.0
+
+# Bandpass corners in Hz, applied after the notch. Both must sit below half
+# the sampling rate.
+ecg_bandpass_low_hz: 2.0
+ecg_bandpass_high_hz: 40.0
+
+
+# ---- ECG amplitude clipping ------------------------------------------------
+#
+# Both values are in millivolts. Lower them to clip more aggressively.
+
+# Hard limit applied before filtering. A segment with more than 5% of its
+# samples beyond this is treated as saturated and fails quality control.
+ecg_clip_mv: 4.0
+
+# Just before beat detection the signal is clipped again to a band that adapts
+# to the recording: the median per-segment peak, plus this margin. Most QRS
+# complexes fall within about 1 mV, so tightening this suppresses artefact -
+# but movement during exercise genuinely exceeds it, and clipping too hard
+# there removes real signal along with the noise.
+ecg_clip_margin_mv: 1.0
+
+
+# ---- ECG noise gate --------------------------------------------------------
+#
+# A segment whose variance falls outside this range, or whose peak-to-peak is
+# below the minimum, is judged too noisy or too flat to score at all.
+
+ecg_var_min: 0.0001
+ecg_var_max: 2.0
+ecg_min_ptp_mv: 0.025
+
+
+# ---- Beat detection --------------------------------------------------------
+
+# Probability above which the detector calls a sample part of a QRS complex.
+# Lowering this finds more beats and more false positives; raising it does the
+# reverse. 0.5 is the usual starting point.
+qrs_threshold: 0.5
+
+# An R-R interval longer than this multiple of the segment median counts as an
+# outlier, usually a missed beat. Works together with max_rr_outliers above.
+rr_outlier_factor: 1.8
+
+
+# ---- Accelerometer ---------------------------------------------------------
+
+# Saturation limit in milli-g. 4000 suits a +/-4 g device; raise it to 8000
+# for a +/-8 g one, or clipping will be over-reported.
+acc_clip_mg: 4000.0
+
+# Auto-calibrate the accelerometer against gravity before use. Turn off only
+# if your data is already calibrated.
+acc_calibrate: true
+
+# Width in samples of the median filter that removes baseline steps from the
+# acceleration magnitude.
+acc_median_filter_samples: 120
+
+
+# ---- Gap filling -----------------------------------------------------------
+
+# Longest gap in seconds filled by linear interpolation. Gaps longer than this
+# are filled from the average for that time of day instead. Set to 0 to
+# interpolate nothing.
+impute_gap_max_s: 600

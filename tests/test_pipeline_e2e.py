@@ -14,9 +14,9 @@ import pandas as pd
 import pyedflib
 import pytest
 
-from edfproc.config import Config
-from edfproc.proc_edf import calculate_summary_metrics, procECG, procEDF
-from edfproc.read_utils import readACC, readEDFECG_info
+from cardiacprep.config import Config
+from cardiacprep.proc_edf import calculate_summary_metrics, procECG, procEDF
+from cardiacprep.read_utils import readACC, readEDFECG_info
 
 # One-hour chunks keep the synthetic files small enough to stay fast.
 CFG = dataclasses.replace(Config(), chunk_hours=1)

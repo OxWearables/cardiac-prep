@@ -5,7 +5,7 @@
 | What you see | What to do |
 |---|---|
 | `command not found: conda` | Install [Miniforge](https://conda-forge.org/download/), then close and reopen your terminal |
-| `No module named ...` | Your environment is not active. Run `conda activate edfproc` |
+| `No module named ...` | Your environment is not active. Run `conda activate cardiacprep` |
 | `No '*.keras' file found` | The detector model is missing. Redo step 4 of [Installation](installation.md) |
 | `Found 2 model files` | Remove the spare `.keras` file from `models` |
 | `No .edf files found` | Your recordings are not in `input_data`, or do not end in `.edf` |

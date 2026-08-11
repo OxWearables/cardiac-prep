@@ -17,7 +17,7 @@ for every push.
 ## Layout
 
 ```text
-src/edfproc/
+src/cardiacprep/
   entry.py          dispatches the process / summarise / inspect subcommands
   cli.py            the process subcommand
   dataset_summary.py  the summarise subcommand

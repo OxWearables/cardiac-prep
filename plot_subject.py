@@ -20,7 +20,7 @@ from pathlib import Path
 # works in a fresh clone with no install step.
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from edfproc.entry import main  # noqa: E402  (import must follow the path setup)
+from cardiacprep.entry import main  # noqa: E402  (import must follow the path setup)
 
 if __name__ == "__main__":
     sys.exit(main(["inspect", *sys.argv[1:]]))

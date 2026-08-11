@@ -9,7 +9,7 @@ import hashlib
 
 import pytest
 
-from edfproc.model_utils import ModelError, find_model, model_fingerprint, sha256_of
+from cardiacprep.model_utils import ModelError, find_model, model_fingerprint, sha256_of
 
 
 def _fake_model(directory, name, content=b"fake weights"):

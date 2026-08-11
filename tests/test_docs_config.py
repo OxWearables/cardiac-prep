@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from edfproc.config import Config
+from cardiacprep.config import Config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_YAML = REPO_ROOT / "config.yaml"

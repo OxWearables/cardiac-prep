@@ -30,16 +30,20 @@ class Command(NamedTuple):
 
 # Order here is the order shown in --help: the order you would run them in.
 COMMANDS: Dict[str, Command] = {
+    "init": Command(
+        "cardiacprep.init_config",
+        "Create a config.yaml you can edit.",
+    ),
     "process": Command(
-        "edfproc.cli",
+        "cardiacprep.cli",
         "Process .edf recordings into per-participant metrics and reports.",
     ),
     "summarise": Command(
-        "edfproc.dataset_summary",
+        "cardiacprep.dataset_summary",
         "Build population-level plots across a processed dataset.",
     ),
     "inspect": Command(
-        "edfproc.subject_plots",
+        "cardiacprep.subject_plots",
         "Plot one participant's processed results.",
     ),
 }
@@ -67,6 +71,7 @@ def _usage() -> str:
         f"Run '{PROG} <command> --help' for the options of a single command.",
         "",
         "Examples:",
+        f"  {PROG} init",
         f"  {PROG} process --input ./input_data",
         f"  {PROG} summarise",
         f"  {PROG} inspect --list",

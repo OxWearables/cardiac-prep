@@ -8,7 +8,7 @@ worker therefore calls configure_logging() again in its initialiser.
 import logging
 import sys
 
-LOGGER_NAME = "edfproc"
+LOGGER_NAME = "cardiacprep"
 
 
 def get_logger(name=None):

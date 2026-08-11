@@ -1,6 +1,6 @@
 """Command line interface for the preprocessing pipeline.
 
-Reachable either as the installed ``edfproc`` command or by running
+Reachable either as the installed ``cardiacprep`` command or by running
 ``python process.py`` from a clone of the repository.
 """
 
@@ -26,7 +26,7 @@ log = get_logger("cli")
 
 def parse_args(argv=None):
     # prog is left unset so the help text names the command the user actually
-    # typed: "process.py" from a clone, "edfproc" once installed.
+    # typed: "process.py" from a clone, "cardiacprep" once installed.
     parser = argparse.ArgumentParser(
         description=(
             "Process wearable ECG and accelerometer recordings from EDF files. "

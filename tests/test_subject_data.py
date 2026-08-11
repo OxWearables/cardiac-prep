@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from edfproc.subject_data import (
+from cardiacprep.subject_data import (
     SubjectNotFoundError,
     daily_profile,
     daily_summary,
