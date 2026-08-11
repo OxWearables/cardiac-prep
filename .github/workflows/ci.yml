@@ -43,6 +43,9 @@ jobs:
       # point wires up correctly without needing any recordings or weights.
       - name: Check the command line entry point
         run: |
-          edfproc --version
-          edfproc --help
+          cardiac-prep --version
+          cardiac-prep --help
+          cardiac-prep process --help
+          cardiac-prep summarise --help
+          cardiac-prep inspect --help
           python process.py --help
