@@ -17,6 +17,11 @@ authors = [
     { name = "Anna Bator" },
     { name = "Stefan van Duijvenboden" },
 ]
+# Who to contact about releases, as distinct from who wrote the code. Kept
+# deliberately separate so the package outlives any one person's post.
+maintainers = [
+    { name = "Anna Bator" },
+]
 keywords = ["ecg", "hrv", "accelerometry", "wearables", "edf", "physical-activity"]
 classifiers = [
     "Development Status :: 4 - Beta",
