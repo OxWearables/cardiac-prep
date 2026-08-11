@@ -139,12 +139,19 @@ pip install -r requirements.txt
 
 This takes several minutes. It is finished when your prompt reappears.
 
-### Step 4 – Download the heart-beat detector
+### Step 4 – The heartbeat detector
 
-The pipeline uses a machine-learning model to find heartbeats. This file is **not** included in this repository.
+The pipeline uses a machine-learning model to find heartbeats. It is too big for this repository, so it is downloaded separately.
 
-1. Download it from: **[TODO: ADD DOWNLOAD LINK]**
-2. Put the `.keras` file into the `models` folder.
+**You do not need to do anything here.** The first run fetches it into the `models` folder, checks it against a known checksum, and carries on.
+
+To fetch it now instead, useful before working somewhere with no wifi:
+
+```
+python process.py --dry-run
+```
+
+> ⚠️ No internet on the machine doing the processing? Fetch the model elsewhere, copy the `.keras` file into `models`, and set `auto_download_model: false` in `config.yaml`.
 
 ### Step 5 – Check it works
 
@@ -261,9 +268,11 @@ pytest
 
 Tests use synthetic data only, so no recordings or model weights are needed. GitHub Actions runs the tests and `ruff check .` on Python 3.9–3.12 for every push.
 
-Installing also provides `cardiac-prep`, runnable from any folder, with three subcommands:
+Installing also provides `cardiac-prep`, runnable from any folder:
 
 ```
+cardiac-prep init         # write a config.yaml you can edit
+cardiac-prep download     # fetch the heartbeat detector
 cardiac-prep process      # same as python process.py
 cardiac-prep summarise    # same as python summarise_dataset.py
 cardiac-prep inspect      # same as python plot_subject.py
