@@ -1,0 +1,114 @@
+name: Publish
+
+# Publishing is driven by GitHub Releases, not by pushes. Draft a release with
+# a tag like v1.1.0 and the package is built, checked, and uploaded to PyPI.
+#
+# Authentication uses PyPI Trusted Publishing (OIDC), so there is no API token
+# stored anywhere in this repository. Before the first run, add this repo as a
+# trusted publisher on PyPI:
+#
+#   https://pypi.org/manage/project/cardiacprep/settings/publishing/
+#     owner:        OxWearables
+#     repository:   cardiac-prep
+#     workflow:     publish.yml
+#     environment:  pypi
+#
+# To rehearse without touching the real index, run this workflow manually with
+# the 'target' input set to testpypi.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Check metadata renders on PyPI
+        run: twine check dist/*
+
+      # The settings template is package data rather than code, so it is the
+      # thing most likely to go missing from a built wheel without any test
+      # noticing. 'cardiac-prep init' is useless without it.
+      - name: Check the settings template is inside the wheel
+        run: |
+          python - <<'PY'
+          import glob, sys, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          if not any(n.endswith("cardiacprep/default_config.yaml") for n in names):
+              sys.exit(f"default_config.yaml missing from {wheel}")
+          print(f"template present in {wheel}")
+          PY
+
+      # A release tagged v1.1.0 that ships version 1.0.0 would be published
+      # and then be impossible to correct: PyPI does not allow reuploads.
+      - name: Check the tag matches the package version
+        if: github.event_name == 'release'
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+          tag = os.environ["TAG"].lstrip("v")
+          wheel = os.path.basename(glob.glob("dist/*.whl")[0])
+          version = wheel.split("-")[1]
+          if tag != version:
+              sys.exit(f"release tag {tag!r} does not match package version {version!r}")
+          print(f"tag and version agree: {version}")
+          PY
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  publish:
+    name: Upload to ${{ github.event_name == 'release' && 'PyPI' || inputs.target }}
+    needs: build
+    runs-on: ubuntu-latest
+
+    # The environment gates the upload, so a release can require review before
+    # anything reaches the index. Configure that under Settings > Environments.
+    environment:
+      name: ${{ github.event_name == 'release' && 'pypi' || inputs.target }}
+
+    permissions:
+      # Required for Trusted Publishing. No password or token is used.
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+      - name: Publish to TestPyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
