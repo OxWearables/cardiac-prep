@@ -102,11 +102,11 @@ An environment is a private space for this project's software, so it cannot clas
 **Option A – conda (recommended)**
 
 ```
-conda create -n edfproc python=3.11 -y
+conda create -n cardiacprep python=3.11 -y
 ```
 
 ```
-conda activate edfproc
+conda activate cardiacprep
 ```
 
 **Option B – venv (built into Python)**
@@ -127,7 +127,7 @@ On **Windows**:
 .venv\Scripts\activate
 ```
 
-✅ **How to tell it worked:** your prompt now starts with `(edfproc)` or `(.venv)`.
+✅ **How to tell it worked:** your prompt now starts with `(cardiacprep)` or `(.venv)`.
 
 > ⚠️ Activate the environment **every time** you open a new terminal. If your prompt does not show the name in brackets, run the activate line again.
 
@@ -240,7 +240,7 @@ This pipeline uses the natural logarithm of RMSSD to normalise HRV. This removes
 | What you see | What to do |
 |---|---|
 | `command not found: conda` | Install Miniforge, then close and reopen your terminal |
-| `No module named ...` | Your environment is not active. Run `conda activate edfproc` |
+| `No module named ...` | Your environment is not active. Run `conda activate cardiacprep` |
 | `No '*.keras' file found` | The detector model is missing. Redo **Setup Step 4** |
 | `Found 2 model files` | Remove the spare `.keras` file from `models` |
 | `No .edf files found` | Your recordings are not in `input_data`, or do not end in `.edf` |
