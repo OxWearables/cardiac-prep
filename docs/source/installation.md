@@ -43,11 +43,11 @@ clash with anything else on your computer. **Pick one option.**
 ### Option A - conda (recommended)
 
 ```text
-conda create -n edfproc python=3.11 -y
+conda create -n cardiacprep python=3.11 -y
 ```
 
 ```text
-conda activate edfproc
+conda activate cardiacprep
 ```
 
 ### Option B - venv (built into Python)
@@ -68,7 +68,7 @@ On **Windows**:
 .venv\Scripts\activate
 ```
 
-**How to tell it worked:** your prompt now starts with `(edfproc)` or
+**How to tell it worked:** your prompt now starts with `(cardiacprep)` or
 `(.venv)`.
 
 :::{warning}
