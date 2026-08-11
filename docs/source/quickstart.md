@@ -69,5 +69,7 @@ cardiac-prep inspect      # same as python plot_subject.py
 ```
 
 `cardiac-prep --help` lists the subcommands, and `cardiac-prep <command>
---help` shows the options for one of them. `edfproc` works as an alias, since
-that is still the name the package is imported under.
+--help` shows the options for one of them.
+
+The package is still imported as `edfproc` in Python code; only the command is
+named after the repository.

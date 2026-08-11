@@ -269,7 +269,7 @@ cardiac-prep summarise    # same as python summarise_dataset.py
 cardiac-prep inspect      # same as python plot_subject.py
 ```
 
-`cardiac-prep --help` lists them; `cardiac-prep <command> --help` shows the options for one. `edfproc` is kept as an alias for the same command.
+`cardiac-prep --help` lists them; `cardiac-prep <command> --help` shows the options for one.
 
 ---
 
