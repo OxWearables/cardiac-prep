@@ -13,10 +13,9 @@ identifying exactly which detector produced those results. A filename is a
 naming convention; a hash is a verifiable claim. Recordings that failed get
 `failed = 1` and a `failure_reason` explaining why.
 
-:::{note}
-A full data dictionary listing every column, its type and its units is being
-added. Until then, this page covers the structure and the columns most people
-need.
+:::{tip}
+This page explains the structure and the columns most people need. For every
+column, with its type and units, see the [Data dictionary](datadict.md).
 :::
 
 ## `*_df_qc.csv.gz` - one row per 10-second segment

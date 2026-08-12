@@ -224,6 +224,118 @@ def render(sections: List[Section]) -> str:
     return "\n".join(out) + "\n"
 
 
+# ---------------------------------------------------------------------------
+# Data dictionary
+# ---------------------------------------------------------------------------
+
+# Each output file, in the order the pages should present them, with the
+# heading and the explanation of what one row means.
+DATADICT_FILES = [
+    (
+        "df_info_summary",
+        "`df_info_summary.csv.gz`",
+        "One row per recording, aggregated across the whole dataset. Written to "
+        "the top level of the output folder.",
+    ),
+    (
+        "df_qc",
+        "`*_df_qc.csv.gz`",
+        "One row per 10-second segment, written per participant into "
+        "`processed_data`. The first column has no header and holds seconds "
+        "from the start of the recording, so row 0 covers 00:00:00-00:00:10.",
+    ),
+]
+
+
+def _tidy_description(text: str) -> str:
+    """Normalise a description written in a spreadsheet.
+
+    Punctuation and stray whitespace are fixed here rather than in the CSV, so
+    that saving the file from Excel or Numbers cannot quietly undo them. The
+    one thing that genuinely has to survive a round trip is the file column,
+    and tests/test_datadict.py fails loudly if it does not.
+    """
+    text = " ".join(text.split())
+    if text.endswith("⚠️"):
+        body = text[:-2].rstrip()
+        return (body if body.endswith(".") else body + ".") + " ⚠️"
+    if text and not text.endswith("."):
+        text += "."
+    return text
+
+
+def read_datadict(path: Path) -> List[Dict[str, str]]:
+    """Read the hand-written data dictionary CSV."""
+    import csv
+
+    # utf-8-sig because the file is edited in a spreadsheet, which writes a BOM.
+    with open(path, newline="", encoding="utf-8-sig") as handle:
+        rows = [
+            {k: (v or "").strip() for k, v in row.items()}
+            for row in csv.DictReader(handle)
+        ]
+
+    for row in rows:
+        if "Description" in row:
+            row["Description"] = _tidy_description(row["Description"])
+    return rows
+
+
+def render_datadict(entries: List[Dict[str, str]]) -> str:
+    out: List[str] = [
+        "<!-- GENERATED FILE - DO NOT EDIT.",
+        "     Produced from docs/datadict.csv by docs/source/_generate.py at",
+        "     build time. Edit that CSV instead. -->",
+        "",
+        "# Data dictionary",
+        "",
+        "Every column the pipeline writes, what it means, and its units.",
+        "",
+        "Blank cells are not missing data. A value is left blank when it could "
+        "not be measured - most often because the device was not worn, or the "
+        "segment did not pass quality control. See [Outputs](outputs.md) for "
+        "why that is expected rather than a fault.",
+        "",
+    ]
+
+    by_file = {key: [] for key, _, _ in DATADICT_FILES}
+    for entry in entries:
+        by_file.setdefault(entry["file"], []).append(entry)
+
+    for key, heading, blurb in DATADICT_FILES:
+        rows = by_file.get(key, [])
+        if not rows:
+            continue
+        out += [f"## {heading}", "", blurb, "", ":::{list-table}", ":header-rows: 1",
+                ":widths: 22 48 12 18", "", "* - Name", "  - Description",
+                "  - Type", "  - Unit"]
+        for row in rows:
+            out += [
+                f"* - `{row['Name']}`",
+                f"  - {row['Description']}",
+                f"  - {row['Type']}",
+                f"  - {row['Unit']}",
+            ]
+        out += [":::", ""]
+
+    return "\n".join(out) + "\n"
+
+
+def write_datadict_page(source_dir: Path, csv_path: Path) -> Path:
+    entries = read_datadict(csv_path)
+
+    missing = [e["Name"] for e in entries if not e.get("Description")]
+    if missing:
+        raise RuntimeError(
+            "These columns have no description in docs/datadict.csv: "
+            + ", ".join(missing)
+        )
+
+    target = source_dir / "datadict.md"
+    target.write_text(render_datadict(entries), encoding="utf-8")
+    return target
+
+
 def write_configuration_page(source_dir: Path, config_path: Path) -> Path:
     sections = parse_config_yaml(config_path)
     documented = setting_names(sections)

@@ -35,8 +35,7 @@ models/*
 # in config.yaml on every build, so it is never committed - edit config.yaml.
 docs/_build/
 docs/source/configuration.md
-docs/datadict.xlsx
-docs/~$datadict.xlsx
+docs/source/datadict.md
 
 *.zip
 *.tar.gz

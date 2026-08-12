@@ -15,11 +15,12 @@ REPO_ROOT = DOCS_SOURCE.parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(DOCS_SOURCE))
 
-from _generate import write_configuration_page  # noqa: E402
+from _generate import write_configuration_page, write_datadict_page  # noqa: E402
 
-# Generated here, at config-execution time, so the page exists before Sphinx
+# Generated here, at config-execution time, so the pages exist before Sphinx
 # discovers source files. Doing it from setup() would be too late.
 write_configuration_page(DOCS_SOURCE, REPO_ROOT / "config.yaml")
+write_datadict_page(DOCS_SOURCE, REPO_ROOT / "docs" / "datadict.csv")
 
 # -- Project information -----------------------------------------------------
 

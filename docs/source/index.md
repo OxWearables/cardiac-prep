@@ -40,6 +40,8 @@ command exactly.
   - You need to change a threshold, a folder, or the night-time window.
 * - [Outputs](outputs.md)
   - You have results and want to know what the columns mean.
+* - [Data dictionary](datadict.md)
+  - You need the exact type and units of a particular column.
 * - [Interpreting results](interpreting.md)
   - Before drawing conclusions - the assumptions worth knowing about.
 * - [Troubleshooting](troubleshooting.md)
@@ -58,6 +60,7 @@ installation
 quickstart
 configuration
 outputs
+datadict
 interpreting
 troubleshooting
 development

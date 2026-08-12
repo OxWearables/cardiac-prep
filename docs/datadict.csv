@@ -1,0 +1,59 @@
+file,Name,Description,Type,Unit
+df_info_summary,Name,Filename of the source .edf recording – not for public display,string,N/A
+df_info_summary,Tstart,"Start date and time of the recording, from the EDF header",datetime,ISO 8601
+df_info_summary,fs_ecg,Sampling rate of the ECG signal as declared in the EDF header,integer,hertz (Hz)
+df_info_summary,units_ecg,"Physical units of the ECG signal, from the EDF header",string,N/A
+df_info_summary,N_ecg,Number of data points in the ECG recording,integer,samples
+df_info_summary,model_file,Filename of the QRS detector weights used for this recording,string,N/A
+df_info_summary,model_sha256,"SHA-256 of the weights file, so a result can be traced to the exact model that produced it",string,N/A
+df_info_summary,failed,"True if processing failed for this recording – written as 1/0 rather than True/False. When 1, the remaining columns are blank from the point processing stopped ⚠️",boolean,N/A
+df_info_summary,failure_reason,Why processing failed – blank if failed is 0,string,N/A
+df_info_summary,fs_acc,Sampling rate of the accelerometer signal as declared in the EDF header,integer,hertz
+df_info_summary,units_acc,"Physical units of the accelerometer signal, from the EDF header",string,N/A
+df_info_summary,N_acc,Number of data points in the accelerometer recording,integer,samples
+df_info_summary,CalibNumSamples,Number of data points used for accelerometer calibration,integer,samples
+df_info_summary,CalibErrorBefore(mg),Accelerometer miscalibration error before calibration,float,milligravity (mg)
+df_info_summary,CalibErrorAfter(mg),Accelerometer miscalibration error after calibration,float,milligravity (mg)
+df_info_summary,CalibNumIters,Number of iterations it took for calibration to converge,integer,count
+df_info_summary,CalibOK,"Whether calibration was successful; 1.0 if yes,  BLANK if not",boolean,N/A
+df_info_summary,CalibxIntercept,Offset applied to the X-axis during calibration,float,gravity (g)
+df_info_summary,CalibyIntercept,Offset applied to the Y-axis during calibration,float,gravity (g)
+df_info_summary,CalibzIntercept,Offset applied to the Z-axis during calibration,float,gravity (g)
+df_info_summary,CalibxSlope,Multiplication factor applied to the X-axis during calibration,float,N/A
+df_info_summary,CalibySlope,Multiplication factor applied to the Y-axis during calibration,float,N/A
+df_info_summary,CalibzSlope,Multiplication factor applied to the Z-axis during calibration,float,N/A
+df_info_summary,HR_min,Lowest 10-minute average heart rate in the recording,float,beats per minute (bpm)
+df_info_summary,HR_max,Highest 10-minute average heart rate in the recording,float,beats per minute (bpm)
+df_info_summary,HR_mean,Mean of the 10-minute average heart rates across the recording,float,beats per minute (bpm)
+df_info_summary,HR_rest_robust,Resting heart rate: median of the 10-minute average heart rates during the night-time periods with very low acceleration (below the pre-defined sleep_threshold_mg cut-point),float,beats per minute (bpm)
+df_info_summary,median_daily_rmssd,Median HRV (RMSSD) across overnight rest windows,float,milliseconds (ms)
+df_info_summary,hours_sleep_sedentary,Time spent below the very light activity cut-point across the whole recording,float,hours (h)
+df_info_summary,hours_very_light,Time spent between the very light and light activity cut-points across the whole recording,float,hours (h)
+df_info_summary,hours_light_activity,Time spent between the light and moderate activity cut-points across the whole recording,float,hours (h)
+df_info_summary,hours_mvpa,Time spent at or above the moderate cut-point across the whole recording (moderate to vigorous physical activity),float,hours (h)
+df_info_summary,wear_time_ECG_10s,"Proportion of 10-second windows in which the device was worn. Despite the name this is a proportion, not a duration",float,proportion (0-1)
+df_info_summary,prop_ECG_passed_finalQC,"Proportion of segments passing final quality control, including non-wear time",float,proportion (0-1)
+df_info_summary,prop_ECG_worn_passed_finalQC,"Proportion of segments passing final quality control, excluding non-wear time – use this as the primary signal quality metric as it is not diluted by non-wear",float,proportion (0-1)
+df_info_summary,frac_RR_imp,Proportion of segments where the R-R interval was imputed rather than measured,float,proportion (0-1)
+df_qc,index,Time from the start of the recording,integer,seconds (s)
+df_qc,device_worn,TRUE if the device was worn during this 10-second window. A perfectly flat trace is treated as non-wear (FALSE),boolean,N/A
+df_qc,clipped_5perc_thrs,"TRUE if more than 5% of samples in the 10-second window exceeded the ecg_clip_mv limit, meaning the signal was saturated and had to be clipped. FALSE = OK",boolean,N/A
+df_qc,passed_initialQC,"True if the segment was worn, not saturated, and within the variance and peak-to-peak limits. Only these segments go to beat detection. When FALSE no beat detection is attempted, so N_beats and every beat-level column are blank ⚠️ and passed_finalQC is FALSE.",boolean,N/A
+df_qc,N_beats,Number of heartbeats the QRS detector found in the segment.,integer,count
+df_qc,N_RR,"Number of physiologically plausible R-R intervals, after discarding any outside (rr_min_ms,  rr_max_ms)",integer,count
+df_qc,RRm_raw,Median R-R interval measured in the window,float,milliseconds (ms)
+df_qc,rr_Cover,Fraction of the window covered by valid R-R intervals. Windows below rr_cover_min fail final quality control.,float,proportion (0-1)
+df_qc,rr_sd,Standard deviation of the valid R-R intervals in the window.,float,milliseconds (ms)
+df_qc,rr_outliers,"Number of R-R intervals longer than the rr_outlier_factor multiple of the window median. Indicates outliers, usually missed beats.",integer,count
+df_qc,qrs_snr,"Signal-to-noise ratio of the detected QRS complexes, comparing the window-level median QRS blueprint against the window standard deviation from it.",float,decibels (dB)
+df_qc,qrs_amp,Amplitude of the median QRS complex in the window.,float,millivolts (mV)
+df_qc,rmssd,Root mean square of successive differences between valid R-R intervals in the window.,float,milliseconds (ms)
+df_qc,passed_finalQC,"True if the segment's beat detections met all quality thresholds. Always false when passed_initialQC is false. When FALSE, RRm_raw is blank ⚠️",boolean,N/A
+df_qc,time,Timestamp of the start of the 10-second segment.,datetime,ISO 8601
+df_qc,acc_raw,"Mean movement magnitude over the segment, after baseline removal. Blank where the device was not worn.",float,milligravity (mg)
+df_qc,acc_clipped,"Proportion of accelerometer samples in the segment that went off the scale. Despite the name this is a proportion, not a boolean flag.",float,proportion (0-1)
+df_qc,RRm_imputed,"Median R-R interval, imputed where it could not be measured. Use this for analysis.",float,milliseconds (ms)
+df_qc,RRm_isImputed,True where RRm_imputed was filled rather than measured.,boolean,N/A
+df_qc,acc_imputed,"Movement magnitude, imputed where it could not be measured. Use this for analysis.",float,milligravity (mg)
+df_qc,acc_isImputed,TRUE where acc_imputed was imputed rather than measured.,boolean,N/A
+df_qc,HRm_imputed,Window heart rate derived from RRm_imputed as 60000 / RRm_imputed.,float,beats per minute (bpm)
