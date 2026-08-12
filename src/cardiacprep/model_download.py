@@ -36,17 +36,24 @@ log = get_logger("model")
 
 # Hosted alongside the group's other models. See docs for how to request that
 # a new version is published here.
-MODEL_BASE_URL = "https://wearables-files.ndph.ox.ac.uk/files/models/cardiacprep/"
+MODEL_BASE_URL = "https://wearables-files.ndph.ox.ac.uk/files/models/cardiac-prep/"
 
 # The weights this release expects, without the .keras suffix.
 MODEL_VERSION = "QRS_detector_125Hz_080525"
 
-# SHA-256 of the published file. PLACEHOLDER: set this to the real digest once
-# the weights are hosted. Until then verification is skipped, with a warning,
-# so the machinery can be exercised before the file exists.
-MODEL_SHA256: Optional[str] = None
+# SHA-256 of the published file, checked before a download is put into place.
+# Publishing new weights means updating this at the same time, otherwise every
+# download is rejected.
+MODEL_SHA256: Optional[str] = (
+    "ce87c8974b58c5cb9f71bec1f438f429dda92a85942d06771af09cc16d15f091"
+)
 
 DOWNLOAD_TIMEOUT_SECONDS = 60
+
+# Distinguishes "use the configured checksum" from "deliberately skip
+# verification". A plain None default would conflate the two, and would also
+# bind MODEL_SHA256 at import time, so overriding it would have no effect.
+_USE_CONFIGURED = object()
 
 
 def model_filename(version: str = MODEL_VERSION) -> str:
@@ -84,7 +91,7 @@ def download_model(
     model_dir: Path,
     version: str = MODEL_VERSION,
     base_url: str = MODEL_BASE_URL,
-    expected_sha256: Optional[str] = MODEL_SHA256,
+    expected_sha256=_USE_CONFIGURED,
     force: bool = False,
 ) -> Path:
     """Download the QRS detector weights into ``model_dir``.
@@ -92,9 +99,16 @@ def download_model(
     Returns the path to the weights. An existing file is left alone unless
     ``force`` is set, so this is cheap to call before every run.
 
+    Args:
+        expected_sha256: Digest to verify against. Defaults to the configured
+            ``MODEL_SHA256``; pass None to skip verification explicitly.
+
     Raises:
         ModelError: The download failed, or the file did not match its hash.
     """
+    if expected_sha256 is _USE_CONFIGURED:
+        expected_sha256 = MODEL_SHA256
+
     model_dir = Path(model_dir).expanduser()
     target = model_dir / model_filename(version)
 

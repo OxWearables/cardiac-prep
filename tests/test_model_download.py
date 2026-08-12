@@ -17,6 +17,23 @@ from cardiacprep.model_utils import ModelError, sha256_of
 
 PAYLOAD = b"not really a keras model, but it downloads the same"
 
+# The digest shipped with the package, captured before any test patches it.
+CONFIGURED_SHA256 = model_download.MODEL_SHA256
+
+
+@pytest.fixture(autouse=True)
+def expect_the_test_payload(monkeypatch):
+    """Point the configured checksum at the stub these tests serve.
+
+    Without this every happy-path test would fail verification against the
+    digest of the real published weights, which is not what is being served.
+    """
+    import hashlib
+
+    monkeypatch.setattr(
+        model_download, "MODEL_SHA256", hashlib.sha256(PAYLOAD).hexdigest()
+    )
+
 
 @pytest.fixture(scope="module")
 def served(tmp_path_factory):
@@ -191,21 +208,12 @@ def test_default_url_points_at_the_group_file_server():
     assert model_download.model_url().endswith(".keras")
 
 
-@pytest.mark.skipif(
-    model_download.MODEL_SHA256 is None,
-    reason="checksum is still a placeholder until the weights are published",
-)
-def test_configured_checksum_is_a_sha256():
-    assert len(model_download.MODEL_SHA256) == 64
-    int(model_download.MODEL_SHA256, 16)
-
-
-def test_placeholder_checksum_is_flagged_as_unset():
-    # A deliberate reminder: this test starts failing the moment someone sets
-    # a real digest, at which point the skip above becomes the live check.
-    if model_download.MODEL_SHA256 is None:
-        pytest.skip("weights not published yet - see model_download.MODEL_SHA256")
-    assert isinstance(model_download.MODEL_SHA256, str)
+def test_the_published_weights_have_a_configured_checksum():
+    # An unset digest would mean every download is accepted unverified, and a
+    # substituted file would produce plausible but wrong beat detections.
+    assert CONFIGURED_SHA256 is not None, "MODEL_SHA256 must not be left unset"
+    assert len(CONFIGURED_SHA256) == 64
+    int(CONFIGURED_SHA256, 16)  # raises if it is not hexadecimal
 
 
 def test_unverified_download_warns(served, tmp_path, caplog):
