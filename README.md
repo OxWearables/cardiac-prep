@@ -1,10 +1,13 @@
 # ECG & Accelerometry (EDF) Preprocessing Pipeline
 
 [![CI](https://github.com/OxWearables/cardiac-prep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OxWearables/cardiac-prep/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/readthedocs/cardiac-prep)](https://cardiac-prep.readthedocs.io/)
 [![Python 3.9–3.12](https://img.shields.io/badge/python-3.9%20%E2%80%93%203.12-blue)](https://www.python.org/downloads/)
 [![Licence: Academic Use](https://img.shields.io/badge/licence-academic%20use-green)](LICENSE)
 
 An end-to-end Python pipeline for processing multi-day wearable sensor data from `.EDF` files. It extracts heart rate, heart rate variability (HRV) and physical activity metrics, performs quality control and imputation, and generates summary reports and visualisations.
+
+📖 **Full documentation: [cardiac-prep.readthedocs.io](https://cardiac-prep.readthedocs.io/)**
 
 **You do not need to be a programmer to use this.** Follow the steps in order, copying each command exactly.
 
