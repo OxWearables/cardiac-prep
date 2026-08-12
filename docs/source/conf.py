@@ -68,6 +68,11 @@ autodoc_mock_imports = [
 ]
 
 autodoc_member_order = "bysource"
+# Dataclasses generate an __init__ from their fields. Left alone, autodoc
+# renders those fields once as constructor parameters and again as attributes.
+# Separating the signature drops the constructor rendering and keeps the
+# attribute list, which is the one that shows defaults.
+autodoc_class_signature = "separated"
 autodoc_typehints = "description"
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
