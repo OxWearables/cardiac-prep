@@ -9,7 +9,7 @@ An end-to-end Python pipeline for processing multi-day wearable sensor data from
 
 📖 **Full documentation: [cardiac-prep.readthedocs.io](https://cardiac-prep.readthedocs.io/)**
 
-**You do not need to be a programmer to use this.** Follow the steps in order, copying each command exactly.
+You do not need to be a programmer to use this. Follow the steps in order, copying each command exactly.
 
 ---
 
