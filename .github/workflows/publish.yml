@@ -108,6 +108,12 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          # A rehearsal must be repeatable. Without this, running it twice on
+          # the same version fails simply because the first run worked, since
+          # no index allows a version to be uploaded twice. Deliberately not
+          # set on the real upload below, where an already-published version
+          # is something you want to hear about loudly.
+          skip-existing: true
 
       - name: Publish to PyPI
         if: github.event_name == 'release' || inputs.target == 'pypi'
