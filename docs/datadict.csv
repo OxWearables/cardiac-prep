@@ -50,10 +50,10 @@ df_qc,qrs_amp,Amplitude of the median QRS complex in the window.,float,millivolt
 df_qc,rmssd,Root mean square of successive differences between valid R-R intervals in the window.,float,milliseconds (ms)
 df_qc,passed_finalQC,"True if the segment's beat detections met all quality thresholds. Always false when passed_initialQC is false. When FALSE, RRm_raw is blank ⚠️",boolean,N/A
 df_qc,time,Timestamp of the start of the 10-second segment.,datetime,ISO 8601
-df_qc,acc_raw,"Mean movement magnitude over the segment, after baseline removal. Blank where the device was not worn.",float,milligravity (mg)
+df_qc,acc_raw,"Mean Amplitude Deviation of the acceleration magnitude, computed over a 60-second epoch and reported identically for each segment within that minute. Blank where the device was not worn",float,milligravity (mg)
 df_qc,acc_clipped,"Proportion of accelerometer samples in the segment that went off the scale. Despite the name this is a proportion, not a boolean flag.",float,proportion (0-1)
 df_qc,RRm_imputed,"Median R-R interval, imputed where it could not be measured. Use this for analysis.",float,milliseconds (ms)
 df_qc,RRm_isImputed,True where RRm_imputed was filled rather than measured.,boolean,N/A
-df_qc,acc_imputed,"Movement magnitude, imputed where it could not be measured. Use this for analysis.",float,milligravity (mg)
+df_qc,acc_imputed,"Mean Amplitude Deviation of the acceleration magnitude, imputed where it could not be measured. Use this for analysis",float,milligravity (mg)
 df_qc,acc_isImputed,TRUE where acc_imputed was imputed rather than measured.,boolean,N/A
 df_qc,HRm_imputed,Window heart rate derived from RRm_imputed as 60000 / RRm_imputed.,float,beats per minute (bpm)

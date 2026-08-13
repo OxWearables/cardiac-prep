@@ -8,7 +8,7 @@ All fixtures are synthetic - no participant data is involved.
 import numpy as np
 import pytest
 
-from cardiacprep.read_utils import prepSig
+from cardiacprep.read_utils import prepSig, readACC
 
 FS = 250
 NSEG = 2500  # 10 seconds at 250 Hz
@@ -122,3 +122,46 @@ def test_prepSig_attenuates_mains_interference():
 
     assert power_hum < power_clean
     assert power_hum == pytest.approx(0.0, abs=1e-3)
+
+
+# Movement: Mean Amplitude Deviation, per epoch
+
+def test_movement_is_constant_within_each_epoch(make_edf):
+    """One MAD value covers a whole minute, so its six segments must agree.
+
+    This is what lets the minute-level Etzkorn cut-points be applied to a
+    ten-second output without straddling epochs.
+    """
+    path = make_edf(hours=0.2, acc_mg=60.0)
+    acc, _, _ = readACC(str(path), tstamp="2026-01-01 09:00:00", T=10, epoch_seconds=60)
+
+    minute = acc.loc[0:50, "acc"]  # bins 0,10,20,30,40,50 - the first minute
+    assert len(minute) == 6
+    assert minute.nunique() == 1, "segments within a minute report different MAD"
+
+
+def test_a_shorter_epoch_changes_the_grouping(make_edf):
+    path = make_edf(hours=0.2, acc_mg=60.0)
+    acc, _, _ = readACC(str(path), tstamp="2026-01-01 09:00:00", T=10, epoch_seconds=20)
+
+    minute = acc.loc[0:50, "acc"]
+    # 20-second epochs mean three distinct values across the same six segments.
+    assert minute.nunique() == 3
+
+
+def test_more_movement_gives_a_larger_deviation(make_edf):
+    still = make_edf(hours=0.2, acc_mg=0.0)
+    moving = make_edf(hours=0.2, acc_mg=200.0)
+
+    still_acc, _, _ = readACC(str(still), tstamp="2026-01-01 09:00:00")
+    moving_acc, _, _ = readACC(str(moving), tstamp="2026-01-01 09:00:00")
+
+    assert moving_acc["acc"].mean() > still_acc["acc"].mean()
+
+
+def test_movement_is_never_negative(make_edf):
+    """MAD is a mean of absolute values, so it cannot go below zero."""
+    path = make_edf(hours=0.2, acc_mg=120.0)
+    acc, _, _ = readACC(str(path), tstamp="2026-01-01 09:00:00")
+
+    assert (acc["acc"] >= 0).all()

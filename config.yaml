@@ -198,9 +198,17 @@ acc_clip_mg: 4000.0
 # if your data is already calibrated.
 acc_calibrate: true
 
-# Width in samples of the median filter that removes baseline steps from the
-# acceleration magnitude.
-acc_median_filter_samples: 120
+# Movement is measured as Mean Amplitude Deviation: the average distance of
+# the acceleration magnitude from its own average over an epoch. This is the
+# quantity the activity cut-points above were derived from.
+#
+# Etzkorn et al. published those cut-points at minute level, so 60 seconds is
+# the value they were validated at. A shorter epoch spreads MAD over a wider
+# range and shifts time between the intensity bands, so changing this means
+# the cut-points no longer describe what they were meant to.
+#
+# Must divide evenly into segment_seconds.
+acc_epoch_seconds: 60
 
 
 # ---- Gap filling -----------------------------------------------------------

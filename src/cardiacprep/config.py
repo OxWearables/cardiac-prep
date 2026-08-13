@@ -121,9 +121,10 @@ class Config:
     # Auto-calibrate the accelerometer against gravity before use.
     acc_calibrate: bool = True
 
-    # Width, in samples, of the median filter that removes baseline steps from
-    # the acceleration magnitude.
-    acc_median_filter_samples: int = 120
+    # Epoch over which Mean Amplitude Deviation is computed, in seconds. The
+    # activity cut-points were published at minute level, so changing this
+    # invalidates them.
+    acc_epoch_seconds: int = 60
 
     # Longest gap, in seconds, filled by linear interpolation. Longer gaps fall
     # back to the average for that time of day.
@@ -258,10 +259,19 @@ class Config:
                 "roughly half of all normal intervals as outliers."
             )
 
-        if self.acc_median_filter_samples < 1:
+        if self.acc_epoch_seconds < 1:
             raise ConfigError(
-                "acc_median_filter_samples must be at least 1, got "
-                f"{self.acc_median_filter_samples}."
+                f"acc_epoch_seconds must be at least 1, got {self.acc_epoch_seconds}."
+            )
+
+        # One MAD value is spread across its whole epoch and then averaged into
+        # segments. If the epoch is not a whole number of segments, a segment
+        # straddles two epochs and reports a blend of them.
+        if self.acc_epoch_seconds % self.segment_seconds:
+            raise ConfigError(
+                f"acc_epoch_seconds ({self.acc_epoch_seconds}) must be a whole "
+                f"multiple of segment_seconds ({self.segment_seconds}), "
+                "otherwise a segment can span two activity epochs."
             )
 
         if self.impute_gap_max_s < 0:

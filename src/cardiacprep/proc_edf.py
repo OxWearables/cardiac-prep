@@ -68,29 +68,6 @@ def init_worker(config, verbose=False):
     log.debug("Worker ready, model %s loaded", model_path.name)
 
 
-def compute_mad(ax, ay, az, epoch_samples):
-    """
-    Compute Mean Amplitude Deviation over fixed-length epochs.
-    
-    ax, ay, az: raw accelerometer arrays (in mg or g, consistent units)
-    epoch_samples: number of samples per epoch (e.g. 500 for 5s at 100Hz)
-    
-    Returns array of MAD values, one per epoch, in same units as input.
-    """
-    # Vector magnitude at each sample
-    vm = np.sqrt(ax**2 + ay**2 + az**2)
-    
-    n_epochs = len(vm) // epoch_samples
-    mad_values = []
-    
-    for i in range(n_epochs):
-        epoch = vm[i * epoch_samples : (i + 1) * epoch_samples]
-        mad = np.mean(np.abs(epoch - np.mean(epoch)))
-        mad_values.append(mad)
-    
-    return np.array(mad_values)
-
-
 def procECG(f, i, chunk_samples, fname, cfg, model, signal_label='ECG', fs=250):
     """Processes a single chunk of ECG data.
 
@@ -402,7 +379,7 @@ def procEDF(edf_file, cfg, model, model_info=None):
             clip_val=cfg.acc_clip_mg,
             T=cfg.segment_seconds,
             do_cal=cfg.acc_calibrate,
-            m_filt_size=cfg.acc_median_filter_samples,
+            epoch_seconds=cfg.acc_epoch_seconds,
         )
         dat_info = pd.concat([dat_info, dat_info_acc], axis=1)
         df_qc = df_qc.join(df_acc, how='left')

@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pyedflib
 from actipy.processing import calibrate_gravity
-from scipy.ndimage import median_filter
 from scipy.signal import butter, filtfilt, iirnotch
 
 from .logging_utils import get_logger
@@ -54,7 +53,43 @@ def readEDFECG_info(edfFile, signal_label='ECG'):
     
     return fs, start_time, dat_info
 
-def readACC(edfFile, tstamp, clip_val=4000,T=10, do_cal=True, calib_cube=0.2, cal_stdtol=0.015, cal_win='10s',m_filt_size=120):
+def mean_amplitude_deviation(vm, epoch_samples):
+    """Mean Amplitude Deviation of a vector-magnitude signal, per epoch.
+
+    MAD is the mean absolute deviation from the epoch's own mean::
+
+        MAD = mean(|VM - mean(VM)|)
+
+    Subtracting the epoch mean removes the constant 1 g of gravity, which is
+    why no separate detrending step is needed - and why adding one would be
+    wrong. A high-pass filter ahead of this would strip out slow movement that
+    the published cut-points were derived to include.
+
+    Returns one value per epoch, in the units of ``vm``. A trailing partial
+    epoch is measured on whatever samples it has rather than discarded, so a
+    recording that is not a whole number of epochs long keeps its final
+    minutes.
+    """
+    vm = np.asarray(vm, dtype="float64")
+    if epoch_samples < 1:
+        raise ValueError(f"epoch_samples must be at least 1, got {epoch_samples}")
+
+    n_full = len(vm) // epoch_samples
+    values = []
+
+    if n_full:
+        epochs = vm[: n_full * epoch_samples].reshape(n_full, epoch_samples)
+        values.append(np.mean(np.abs(epochs - epochs.mean(axis=1, keepdims=True)), axis=1))
+
+    remainder = vm[n_full * epoch_samples:]
+    if remainder.size:
+        values.append(np.array([np.mean(np.abs(remainder - remainder.mean()))]))
+
+    return np.concatenate(values) if values else np.array([])
+
+
+def readACC(edfFile, tstamp, clip_val=4000, T=10, do_cal=True, calib_cube=0.2,
+            cal_stdtol=0.015, cal_win='10s', epoch_seconds=60):
     log.debug("Reading accelerometer data")
     f = pyedflib.EdfReader(edfFile)
     
@@ -97,21 +132,27 @@ def readACC(edfFile, tstamp, clip_val=4000,T=10, do_cal=True, calib_cube=0.2, ca
 
         dat_info = pd.concat([dat_info, pd.DataFrame([dat[1]])], axis=1)
         dat = dat[0][['x','y','z']].to_numpy()
-        dat = 1000 * (np.linalg.norm(dat,axis=-1) - 1)
-        
+        # Vector magnitude in milli-g, gravity included. MAD removes it below.
+        dat = 1000 * np.linalg.norm(dat, axis=-1)
+
     else:
-        dat = np.linalg.norm(dat,axis=0) - 1000
+        dat = np.linalg.norm(dat, axis=0)
 
+    # Movement is Mean Amplitude Deviation, the quantity the activity
+    # cut-points in Etzkorn et al. (2024) were derived from. They were
+    # published at minute level, so the epoch defaults to 60 seconds; a
+    # shorter epoch gives MAD a wider distribution and would bias the time
+    # spent in each intensity band.
+    epoch_samples = max(1, int(round(epoch_seconds * fs)))
+    mad = mean_amplitude_deviation(dat, epoch_samples)
 
-    # do median filter to get these step functions out
-    dat = dat - median_filter(dat, size=m_filt_size,axes=1)
-    
-    dat[dat<0] = 0 # remove negative values
+    # One MAD value covers a whole epoch, so every sample inside that epoch
+    # carries it. Binning below then reduces it to the analysis resolution
+    # without changing the value.
+    dat = np.repeat(mad, epoch_samples)[:len(dat_c)]
+    if len(dat) < len(dat_c):  # trailing partial epoch
+        dat = np.concatenate([dat, np.full(len(dat_c) - len(dat), mad[-1])])
 
-    # if len(acc) % NSEG_A>0: # pad if needed
-    # pad_size = NSEG_A - len(acc) % NSEG_A # padding size
-    # acc = np.pad(acc, (0, pad_size))
-    
     dat = pd.DataFrame({"bin":((np.arange(len(dat))/fs) // T).astype(int) * T, "acc": dat, "acc_clipped": dat_c})
     dat = dat.set_index('bin')
  

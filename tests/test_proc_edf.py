@@ -12,65 +12,82 @@ import pandas as pd
 import pytest
 
 from cardiacprep.config import Config
-from cardiacprep.proc_edf import _is_within_rest_window, calculate_summary_metrics, compute_mad
+from cardiacprep.proc_edf import _is_within_rest_window, calculate_summary_metrics
+from cardiacprep.read_utils import mean_amplitude_deviation
 
 CFG = Config()
 
 
-# compute_mad
+# mean_amplitude_deviation
+#
+# These moved here from a compute_mad() that took three axes and was never
+# called. MAD now takes the vector magnitude, because readACC has already
+# computed it from the calibrated signal.
 
-def test_compute_mad_is_zero_for_static_signal():
+def _vm(ax, ay, az):
+    return np.sqrt(np.asarray(ax) ** 2 + np.asarray(ay) ** 2 + np.asarray(az) ** 2)
+
+
+def test_mad_is_zero_for_static_signal():
     """A device held perfectly still has no amplitude deviation."""
     n = 400
-    ax = np.full(n, 3.0)
-    ay = np.full(n, 4.0)
-    az = np.zeros(n)  # vector magnitude is a constant 5.0
+    vm = _vm(np.full(n, 3.0), np.full(n, 4.0), np.zeros(n))  # constant 5.0
 
-    mad = compute_mad(ax, ay, az, epoch_samples=100)
+    mad = mean_amplitude_deviation(vm, epoch_samples=100)
 
     assert mad.shape == (4,)
     assert np.allclose(mad, 0.0)
 
 
-def test_compute_mad_known_value():
-    """Hand-computable case: magnitudes [0,0,6,6] deviate from their mean of 3 by 3."""
-    ax = np.array([0.0, 0.0, 6.0, 6.0])
-    ay = np.zeros(4)
-    az = np.zeros(4)
-
-    mad = compute_mad(ax, ay, az, epoch_samples=4)
+def test_mad_known_value():
+    """Hand-computable: magnitudes [0,0,6,6] deviate from their mean of 3 by 3."""
+    mad = mean_amplitude_deviation(np.array([0.0, 0.0, 6.0, 6.0]), epoch_samples=4)
 
     assert mad == pytest.approx([3.0])
 
 
-def test_compute_mad_discards_incomplete_trailing_epoch():
-    """Only whole epochs are returned; a partial tail is dropped."""
-    ax = np.ones(250)
-    ay = np.zeros(250)
-    az = np.zeros(250)
+def test_mad_removes_a_constant_offset():
+    """Gravity is a constant, and MAD subtracts the epoch mean, so it cancels.
 
-    mad = compute_mad(ax, ay, az, epoch_samples=100)
+    This is why no separate detrending step is needed before MAD.
+    """
+    movement = np.array([0.0, 0.0, 6.0, 6.0])
 
-    assert mad.shape == (2,)  # 250 // 100, the final 50 samples are ignored
-
-
-def test_compute_mad_handles_input_shorter_than_one_epoch():
-    ax = np.ones(10)
-
-    mad = compute_mad(ax, np.zeros(10), np.zeros(10), epoch_samples=100)
-
-    assert mad.shape == (0,)
+    assert mean_amplitude_deviation(movement, 4) == pytest.approx(
+        mean_amplitude_deviation(movement + 1000.0, 4)
+    )
 
 
-def test_compute_mad_is_invariant_to_axis_permutation():
-    """MAD is computed from the vector magnitude, so axis order cannot matter."""
+def test_mad_measures_a_trailing_partial_epoch():
+    """A recording that is not a whole number of epochs keeps its final minutes."""
+    vm = np.ones(250)
+
+    mad = mean_amplitude_deviation(vm, epoch_samples=100)
+
+    assert mad.shape == (3,)  # two whole epochs plus the final 50 samples
+
+
+def test_mad_handles_input_shorter_than_one_epoch():
+    mad = mean_amplitude_deviation(np.ones(10), epoch_samples=100)
+
+    assert mad.shape == (1,)
+    assert mad[0] == pytest.approx(0.0)
+
+
+def test_mad_is_invariant_to_axis_permutation():
+    """MAD comes from the vector magnitude, so axis order cannot matter."""
     rng = np.random.default_rng(2)
     ax, ay, az = rng.normal(size=(3, 300))
 
     assert np.allclose(
-        compute_mad(ax, ay, az, 100),
-        compute_mad(az, ax, ay, 100),
+        mean_amplitude_deviation(_vm(ax, ay, az), 100),
+        mean_amplitude_deviation(_vm(az, ax, ay), 100),
     )
+
+
+def test_mad_rejects_a_meaningless_epoch():
+    with pytest.raises(ValueError, match="at least 1"):
+        mean_amplitude_deviation(np.ones(10), epoch_samples=0)
 
 
 # calculate_summary_metrics
