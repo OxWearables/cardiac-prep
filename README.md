@@ -20,7 +20,7 @@ Once set up, this is the whole pipeline. Run them in this order:
 ### 1. Process your recordings
 
 ```
-python process.py
+cardiac-prep process
 ```
 
 Reads every `.edf` file in `input_data` and writes results to `output`. About 30 seconds per file.
@@ -28,7 +28,7 @@ Reads every `.edf` file in `input_data` and writes results to `output`. About 30
 ### 2. Summarise the whole dataset
 
 ```
-python summarise_dataset.py
+cardiac-prep summarise
 ```
 
 Creates population-level plots across all participants.
@@ -36,18 +36,14 @@ Creates population-level plots across all participants.
 ### 3. Inspect one participant (optional)
 
 ```
-python plot_subject.py --list
+cardiac-prep inspect --list
 ```
 
 ```
-python plot_subject.py --subject NAME_FROM_THE_LIST
+cardiac-prep inspect --subject NAME_FROM_THE_LIST
 ```
 
 Add `--show` to open the plots in a window as well as saving them.
-
-> **Installed the package?** These three scripts are shortcuts for one command
-> with three subcommands, runnable from any folder:
-> `cardiac-prep process`, `cardiac-prep summarise`, `cardiac-prep inspect`.
 
 > **First time here?** Do the [Setup](#setup-) below first. Add `--help` to any command to see its options.
 
@@ -86,19 +82,7 @@ If that says "command not found", or shows a version outside the range, install 
 
 You only do this once.
 
-### Step 1 – Download the code
-
-```
-git clone https://github.com/OxWearables/cardiac-prep.git
-```
-
-```
-cd cardiac-prep
-```
-
-Stay in this folder for every command that follows.
-
-### Step 2 – Create a separate environment
+### Step 1 – Create a separate environment
 
 An environment is a private space for this project's software, so it cannot clash with anything else on your computer. **Pick ONE option.**
 
@@ -134,13 +118,23 @@ On **Windows**:
 
 > ⚠️ Activate the environment **every time** you open a new terminal. If your prompt does not show the name in brackets, run the activate line again.
 
-### Step 3 – Install the required software
+### Step 2 – Install the pipeline
 
 ```
-pip install -r requirements.txt
+pip install cardiacprep
 ```
 
 This takes several minutes. It is finished when your prompt reappears.
+
+### Step 3 – Set up a folder for your study
+
+Go to wherever you want your results to live, then:
+
+```
+cardiac-prep init
+```
+
+This creates `config.yaml` plus the `input_data`, `output` and `models` folders, and prints the handful of settings worth checking before you start.
 
 ### Step 4 – The heartbeat detector
 
@@ -151,7 +145,7 @@ The pipeline uses a machine-learning model to find heartbeats. It is too big for
 To fetch it now instead, useful before working somewhere with no wifi:
 
 ```
-python process.py --dry-run
+cardiac-prep download
 ```
 
 > ⚠️ No internet on the machine doing the processing? Fetch the model elsewhere, copy the `.keras` file into `models`, and set `auto_download_model: false` in `config.yaml`.
@@ -159,7 +153,7 @@ python process.py --dry-run
 ### Step 5 – Check it works
 
 ```
-python process.py --help
+cardiac-prep --help
 ```
 
 If you see a list of options, setup is complete. 🎉
@@ -173,13 +167,13 @@ Put your `.edf` files into the `input_data` folder, then use [the three commands
 To preview what will be processed without processing anything:
 
 ```
-python process.py --dry-run
+cardiac-prep process --dry-run
 ```
 
 To use folders elsewhere on your computer:
 
 ```
-python process.py --input /path/to/my/edfs --output /path/to/my/results
+cardiac-prep process --input /path/to/my/edfs --output /path/to/my/results
 ```
 
 ---
@@ -261,8 +255,14 @@ This pipeline uses the natural logarithm of RMSSD to normalise HRV. This removes
 
 ## For developers 🛠️
 
+Work from a clone rather than the released package:
+
 ```
-pip install -e ".[dev]"
+git clone https://github.com/OxWearables/cardiac-prep.git
+```
+
+```
+cd cardiac-prep && pip install -e ".[dev]"
 ```
 
 ```
@@ -271,17 +271,9 @@ pytest
 
 Tests use synthetic data only, so no recordings or model weights are needed. GitHub Actions runs the tests and `ruff check .` on Python 3.9–3.12 for every push.
 
-Installing also provides `cardiac-prep`, runnable from any folder:
+A clone also has `process.py`, `summarise_dataset.py` and `plot_subject.py` at the root, which run the same three subcommands without installing anything.
 
-```
-cardiac-prep init         # write a config.yaml you can edit
-cardiac-prep download     # fetch the heartbeat detector
-cardiac-prep process      # same as python process.py
-cardiac-prep summarise    # same as python summarise_dataset.py
-cardiac-prep inspect      # same as python plot_subject.py
-```
-
-`cardiac-prep --help` lists them; `cardiac-prep <command> --help` shows the options for one.
+See the [developer documentation](https://cardiac-prep.readthedocs.io/en/latest/development.html) for the layout, how the docs are built, and how releases are made.
 
 ---
 

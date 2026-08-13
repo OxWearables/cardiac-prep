@@ -6,7 +6,7 @@ commands in order. Add `--help` to any of them to see its options.
 ## 1. Process your recordings
 
 ```text
-python process.py
+cardiac-prep process
 ```
 
 Reads every `.edf` file in `input_data` and writes results to `output`. About
@@ -15,13 +15,13 @@ Reads every `.edf` file in `input_data` and writes results to `output`. About
 To preview what would be processed without processing anything:
 
 ```text
-python process.py --dry-run
+cardiac-prep process --dry-run
 ```
 
 To use folders elsewhere on your computer:
 
 ```text
-python process.py --input /path/to/my/edfs --output /path/to/my/results
+cardiac-prep process --input /path/to/my/edfs --output /path/to/my/results
 ```
 
 If one recording fails, the rest still process. The failure is named in the
@@ -30,7 +30,7 @@ final summary and recorded in `df_info_summary.csv.gz` with a `failure_reason`.
 ## 2. Summarise the whole dataset
 
 ```text
-python summarise_dataset.py
+cardiac-prep summarise
 ```
 
 Creates population-level plots across all participants.
@@ -38,11 +38,11 @@ Creates population-level plots across all participants.
 ## 3. Inspect one participant (optional)
 
 ```text
-python plot_subject.py --list
+cardiac-prep inspect --list
 ```
 
 ```text
-python plot_subject.py --subject NAME_FROM_THE_LIST
+cardiac-prep inspect --subject NAME_FROM_THE_LIST
 ```
 
 Add `--show` to open the plots in a window as well as saving them, and
@@ -53,20 +53,12 @@ reprocess anything. The heart-rate-and-movement trace is not offered here
 because the per-participant PDF report written during processing already
 contains it.
 
-## The installed command
+## Running from a clone
 
-The three scripts above are shortcuts. Installing the package provides one
-command with the same three steps as subcommands, runnable from any folder:
-
-```text
-pip install -e .
-```
-
-```text
-cardiac-prep process      # same as python process.py
-cardiac-prep summarise    # same as python summarise_dataset.py
-cardiac-prep inspect      # same as python plot_subject.py
-```
+A checkout has `process.py`, `summarise_dataset.py` and `plot_subject.py` at
+the root. They forward to the same subcommands, so `python process.py` and
+`cardiac-prep process` do exactly the same thing. Useful when you want to run
+straight from a clone without installing.
 
 `cardiac-prep --help` lists the subcommands, and `cardiac-prep <command>
 --help` shows the options for one of them.

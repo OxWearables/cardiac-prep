@@ -23,19 +23,7 @@ press Start, type "Miniforge Prompt", press Enter. On **Linux** press
 `Ctrl + Alt + T`.
 :::
 
-## Step 1 - Download the code
-
-```text
-git clone https://github.com/OxWearables/cardiac-prep.git
-```
-
-```text
-cd cardiac-prep
-```
-
-Stay in this folder for every command that follows.
-
-## Step 2 - Create a separate environment
+## Step 1 - Create a separate environment
 
 An environment is a private space for this project's software, so it cannot
 clash with anything else on your computer. **Pick one option.**
@@ -76,13 +64,29 @@ Activate the environment **every time** you open a new terminal. If your prompt
 does not show the name in brackets, run the activate line again.
 :::
 
-## Step 3 - Install the required software
+## Step 2 - Install the pipeline
 
 ```text
-pip install -r requirements.txt
+pip install cardiacprep
 ```
 
 This takes several minutes. It is finished when your prompt reappears.
+
+## Step 3 - Set up a folder for your study
+
+Go to wherever you want your results to live, then:
+
+```text
+cardiac-prep init
+```
+
+That writes `config.yaml` and creates the `input_data`, `output` and `models`
+folders beside it, then prints the settings worth checking before you start.
+
+:::{tip}
+`cardiac-prep init --output ./my-study` sets everything up in a new folder
+instead, which is handy when you have several studies on the go.
+:::
 
 ## Step 4 - Get the heartbeat detector
 
@@ -93,8 +97,8 @@ to keep in the repository, so it is downloaded separately.
 pipeline it fetches the weights into your `models` folder automatically, checks
 them against a known checksum, and carries on.
 
-To fetch them ahead of time, which is worth doing before working somewhere
-without a reliable connection:
+To fetch them ahead of time, worth doing before working somewhere without a
+reliable connection:
 
 ```text
 cardiac-prep download
@@ -116,7 +120,26 @@ can always tell which detector produced a given result.
 ## Step 5 - Check it works
 
 ```text
-python process.py --help
+cardiac-prep --help
 ```
 
 If you see a list of options, setup is complete.
+
+
+## Working from a clone
+
+Contributors, and anyone who wants to modify the pipeline, should work from a
+checkout instead:
+
+```text
+git clone https://github.com/OxWearables/cardiac-prep.git
+```
+
+```text
+cd cardiac-prep && pip install -e ".[dev]"
+```
+
+A clone already contains `config.yaml` and the working folders, so `init` is
+not needed. It also has `process.py`, `summarise_dataset.py` and
+`plot_subject.py` at the root, which run the same subcommands without
+installing anything. See [Development](development.md).
