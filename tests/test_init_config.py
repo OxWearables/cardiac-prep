@@ -119,3 +119,52 @@ def test_help_exits_cleanly(flag):
     with pytest.raises(SystemExit) as excinfo:
         init_config.main([flag])
     assert excinfo.value.code == 0
+
+
+# Folder scaffolding
+#
+# A clone arrives with these folders; a pip install cannot create them, since
+# pip writes into site-packages and has no idea where the study will live.
+
+def test_creates_the_working_folders(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert init_config.main(["--quiet"]) == 0
+
+    for folder in ("input_data", "output", "models"):
+        assert (tmp_path / folder).is_dir(), f"{folder} was not created"
+
+
+def test_names_the_folders_it_made(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    init_config.main([])
+
+    out = capsys.readouterr().out
+    assert "recordings go here" in out
+    assert "input_data" in out
+
+
+def test_folders_follow_the_configured_locations(tmp_path, monkeypatch):
+    """init reads the config it just wrote, so an edited template is honoured."""
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "config.yaml"
+    config.write_text("input_dir: ./recordings\noutput_dir: ./results\n")
+
+    assert init_config.main(["--force"]) == 0
+    # --force overwrites with the packaged template, so the defaults apply.
+    assert (tmp_path / "input_data").is_dir()
+
+
+def test_existing_folders_are_not_an_error(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "input_data").mkdir()
+
+    assert init_config.main(["--quiet"]) == 0
+    assert (tmp_path / "input_data").is_dir()
+
+
+def test_folders_are_made_beside_the_config_file(tmp_path):
+    """--output somewhere else puts the folders there too, not in the cwd."""
+    elsewhere = tmp_path / "study"
+
+    assert init_config.main(["--output", str(elsewhere), "--quiet"]) == 0
+    assert (elsewhere / "input_data").is_dir()

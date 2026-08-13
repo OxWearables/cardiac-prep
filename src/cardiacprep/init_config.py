@@ -17,7 +17,7 @@ from dataclasses import fields
 from pathlib import Path
 
 from . import __version__
-from .config import DEFAULT_CONFIG_FILENAME, Config
+from .config import DEFAULT_CONFIG_FILENAME, Config, load_config
 from .logging_utils import configure_logging, get_logger
 
 log = get_logger("init")
@@ -66,9 +66,10 @@ def parse_args(argv=None):
     parser.add_argument(
         "-o", "--output", metavar="PATH",
         help=(
-            "Where to write the file. A folder gets "
-            f"{DEFAULT_CONFIG_FILENAME} inside it. Defaults to the current "
-            "folder."
+            "Where to set the study up. A folder gets "
+            f"{DEFAULT_CONFIG_FILENAME} and the working folders inside it; a "
+            "path ending .yaml names the config file itself. Defaults to the "
+            "current folder."
         ),
     )
     parser.add_argument(
@@ -86,13 +87,66 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
+CONFIG_SUFFIXES = (".yaml", ".yml")
+
+
 def _target_path(output) -> Path:
+    """Where to write the config file.
+
+    A path ending in .yaml or .yml names the file itself. Anything else is a
+    folder to set the study up in, whether or not it exists yet - otherwise
+    'init --output ./my-study' would create a file called my-study, which is
+    not what anyone means by it.
+    """
     if output is None:
         return Path.cwd() / DEFAULT_CONFIG_FILENAME
     path = Path(output).expanduser()
-    if path.is_dir():
-        return path / DEFAULT_CONFIG_FILENAME
-    return path
+    if path.suffix.lower() in CONFIG_SUFFIXES:
+        return path
+    return path / DEFAULT_CONFIG_FILENAME
+
+
+def _make_working_folders(config_path: Path):
+    """Create the folders the pipeline expects, alongside the config file.
+
+    Returns the paths created, most usefully so the caller can show the user
+    where to put their recordings. Folders that already exist are reported
+    too, since the point is to show the layout rather than to report news.
+    """
+    config = load_config(path=config_path)
+    made = []
+    for label, folder in (
+        ("recordings go here", config.input_dir),
+        ("results appear here", config.output_dir),
+        ("detector weights", config.model_dir),
+    ):
+        path = Path(folder).expanduser()
+        if not path.is_absolute():
+            path = config_path.parent / path
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            made.append((label, path))
+        except OSError as exc:
+            log.warning("Could not create %s: %s", path, exc)
+    return made
+
+
+def _shorten(path: Path) -> str:
+    """Show a path relative to the current folder when it is inside it."""
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
+
+
+def _describe_folders(created) -> str:
+    if not created:
+        return ""
+    shown = [(label, _shorten(p)) for label, p in created]
+    width = max(len(p) for _, p in shown)
+    lines = ["", "Folders ready:", ""]
+    lines += [f"  {p:<{width}}   {label}" for label, p in shown]
+    return "\n".join(lines)
 
 
 def _describe_highlights(defaults) -> str:
@@ -143,9 +197,16 @@ def main(argv=None):
         print(f"\nCould not write '{target}': {exc}\n", file=sys.stderr)
         return 1
 
+    # A clone arrives with these folders already present. An install from PyPI
+    # does not, and pip cannot create them: it writes into site-packages and
+    # has no idea where the study will live. So they are made here, where the
+    # user has chosen a working folder, rather than left to fail on first run.
+    created = _make_working_folders(target)
+
     print(f"Created {target}")
 
     if not args.quiet:
+        print(_describe_folders(created))
         defaults = {f.name: getattr(Config(), f.name) for f in fields(Config)}
         print(_describe_highlights(defaults))
 
